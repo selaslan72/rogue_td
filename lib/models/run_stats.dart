@@ -9,6 +9,7 @@ class RunStats {
   double goldMul = 1.0;
   double enemyHpMul = 1.0;
   double enemySpeedMul = 1.0;
+  final Map<String, int> towerTrainingLevels = {};
 
   void reset() {
     damageMul = 1.0;
@@ -17,7 +18,20 @@ class RunStats {
     goldMul = 1.0;
     enemyHpMul = 1.0;
     enemySpeedMul = 1.0;
+    towerTrainingLevels.clear();
   }
+
+  int towerTrainingLevel(String towerId) => towerTrainingLevels[towerId] ?? 0;
+
+  void trainTower(String towerId) {
+    towerTrainingLevels[towerId] = towerTrainingLevel(towerId) + 1;
+  }
+
+  double towerDamageMul(String towerId) =>
+      1.0 + towerTrainingLevel(towerId) * 0.10;
+
+  double towerRangeMul(String towerId) =>
+      1.0 + towerTrainingLevel(towerId) * 0.05;
 
   void apply(RunModifier mod) {
     switch (mod.kind) {

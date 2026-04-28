@@ -45,18 +45,23 @@ class TdGame extends FlameGame with HasGameReference {
   final ValueNotifier<int> goldNotifier = ValueNotifier(initialGold);
   final ValueNotifier<int> waveNotifier = ValueNotifier(0);
   final ValueNotifier<String?> messageNotifier = ValueNotifier(null);
-  final ValueNotifier<List<TowerCard>> unlockedNotifier =
-      ValueNotifier(List.from(TowerRegistry.all));
+  final ValueNotifier<List<EnemyDef>> wavePreviewNotifier = ValueNotifier([]);
+  final ValueNotifier<List<TowerCard>> unlockedNotifier = ValueNotifier(
+    List.from(TowerRegistry.all),
+  );
 
   TowerCard selectedTower = TowerRegistry.archer;
-  final ValueNotifier<TowerCard> selectedTowerNotifier =
-      ValueNotifier(TowerRegistry.archer);
+  final ValueNotifier<TowerCard> selectedTowerNotifier = ValueNotifier(
+    TowerRegistry.archer,
+  );
 
   final ValueNotifier<TowerComponent?> selectedExistingTowerNotifier =
       ValueNotifier(null);
 
   // Wave sonu kart seçimi
-  final ValueNotifier<List<TowerCard>?> cardSelectNotifier = ValueNotifier(null);
+  final ValueNotifier<List<TowerCard>?> cardSelectNotifier = ValueNotifier(
+    null,
+  );
 
   // Run başı modifier seçimi (3 RunModifier)
   final ValueNotifier<List<RunModifier>?> modifierSelectNotifier =
@@ -81,6 +86,7 @@ class TdGame extends FlameGame with HasGameReference {
     camera.viewfinder.visibleGameSize = Vector2(480, 800);
     cardPool = CardPool(TowerRegistry.all);
     _buildMap(PathData.random());
+    _updateWavePreview();
     // İlk run modifier seçimi — overlay açılır, oyuncu bir modifier seçer
     _showModifierSelection();
   }
@@ -90,55 +96,44 @@ class TdGame extends FlameGame with HasGameReference {
   void _buildMap(GameMap map) {
     currentMap = map;
 
-    add(PathComponent(
-      waypoints: map.waypoints,
-      pathWidth: PathData.pathWidth,
-    ));
+    add(PathComponent(waypoints: map.waypoints, pathWidth: PathData.pathWidth));
 
-    add(CastleComponent(
-      worldPosition: map.waypoints.first,
-      isEntry: true,
-    ));
-    add(CastleComponent(
-      worldPosition: map.waypoints.last,
-      isEntry: false,
-    ));
+    add(CastleComponent(worldPosition: map.waypoints.first, isEntry: true));
+    add(CastleComponent(worldPosition: map.waypoints.last, isEntry: false));
 
     for (final (x, y, treeScale) in map.treePositions) {
-      add(TreeComponent(
-        worldPosition: Vector2(x, y),
-        sizeScale: treeScale,
-      ));
+      add(TreeComponent(worldPosition: Vector2(x, y), sizeScale: treeScale));
     }
 
     int rockSeed = 0;
     for (final (x, y, rockScale) in map.rockPositions) {
-      add(RockComponent(
-        worldPosition: Vector2(x, y),
-        sizeScale: rockScale,
-        seed: rockSeed++,
-      ));
+      add(
+        RockComponent(
+          worldPosition: Vector2(x, y),
+          sizeScale: rockScale,
+          seed: rockSeed++,
+        ),
+      );
     }
 
     for (final slotPos in map.towerSlots) {
-      add(TowerSlot(
-        worldPosition: slotPos,
-        onTap: _handleSlotTap,
-      ));
+      add(TowerSlot(worldPosition: slotPos, onTap: _handleSlotTap));
     }
   }
 
   /// Tüm gameplay component'larını siler — yeni map için temizlik.
   void _clearMap() {
     final removable = children
-        .where((c) =>
-            c is PathComponent ||
-            c is CastleComponent ||
-            c is TreeComponent ||
-            c is RockComponent ||
-            c is TowerSlot ||
-            c is TowerComponent ||
-            c is EnemyComponent)
+        .where(
+          (c) =>
+              c is PathComponent ||
+              c is CastleComponent ||
+              c is TreeComponent ||
+              c is RockComponent ||
+              c is TowerSlot ||
+              c is TowerComponent ||
+              c is EnemyComponent,
+        )
         .toList();
     for (final c in removable) {
       c.removeFromParent();
@@ -159,12 +154,15 @@ class TdGame extends FlameGame with HasGameReference {
 
     slot.isOccupied = true;
     selectedExistingTowerNotifier.value = null;
-    add(TowerComponent(
-      card: selectedTower,
-      worldPosition: slot.position,
-      onTap: _handleTowerTap,
-      stats: stats,
-    ));
+    add(
+      TowerComponent(
+        card: selectedTower,
+        worldPosition: slot.position,
+        onTap: _handleTowerTap,
+        stats: stats,
+        slot: slot,
+      ),
+    );
   }
 
   void selectTower(TowerCard card) {
@@ -200,8 +198,21 @@ class TdGame extends FlameGame with HasGameReference {
     gold -= cost;
     goldNotifier.value = gold;
     tower.upgrade();
+    tower.investedGold += cost;
     selectedExistingTowerNotifier.value = null;
     selectedExistingTowerNotifier.value = tower;
+  }
+
+  void sellTower(TowerComponent tower) {
+    if (runEnded) return;
+    final refund = (tower.investedGold * 0.6).round();
+    gold += refund;
+    goldNotifier.value = gold;
+    tower.slot.isOccupied = false;
+    tower.showRange = false;
+    selectedExistingTowerNotifier.value = null;
+    tower.removeFromParent();
+    _flashMessage('Sold ${tower.card.name} (+$refund gold)');
   }
 
   // ─── Wave akışı ───────────────────────────────────────────────────────────
@@ -215,30 +226,40 @@ class TdGame extends FlameGame with HasGameReference {
     wave++;
     waveNotifier.value = wave;
     _buildWaveQueue(wave);
+    _updateWavePreview();
     waveEnemiesRemaining = _waveQueue.length;
     waveActive = true;
     _spawnTimer = 0;
-    _spawnInterval = wave == maxWaves ? 2.5 : (wave == 5 || wave == 10 ? 2.0 : 1.5);
-    _flashMessage(wave == maxWaves
-        ? 'FINAL BOSS'
-        : (wave == 5 || wave == 10 ? 'BOSS WAVE $wave' : 'WAVE $wave'));
+    _spawnInterval = wave == maxWaves
+        ? 2.5
+        : (wave == 5 || wave == 10 ? 2.0 : 1.5);
+    _flashMessage(
+      wave == maxWaves
+          ? 'FINAL BOSS'
+          : (wave == 5 || wave == 10 ? 'BOSS WAVE $wave' : 'WAVE $wave'),
+    );
   }
 
   /// Wave'in spawn kuyruğunu önceden hazırlar.
   void _buildWaveQueue(int w) {
     _waveQueue.clear();
+    _waveQueue.addAll(_buildWaveList(w));
+  }
+
+  List<EnemyDef> _buildWaveList(int w) {
+    final result = <EnemyDef>[];
     if (w == maxWaves) {
       // Final boss + adds
-      _waveQueue.add(EnemyRegistry.finalBoss);
-      _waveQueue.addAll(List.filled(8, EnemyRegistry.tank));
-      _waveQueue.addAll(List.filled(6, EnemyRegistry.basic));
-      return;
+      result.add(EnemyRegistry.finalBoss);
+      result.addAll(List.filled(8, EnemyRegistry.tank));
+      result.addAll(List.filled(6, EnemyRegistry.basic));
+      return result;
     }
     if (w == 5 || w == 10) {
-      _waveQueue.add(EnemyRegistry.miniBoss);
-      _waveQueue.addAll(List.filled(w == 10 ? 8 : 5, EnemyRegistry.basic));
-      _waveQueue.addAll(List.filled(w == 10 ? 4 : 2, EnemyRegistry.tank));
-      return;
+      result.add(EnemyRegistry.miniBoss);
+      result.addAll(List.filled(w == 10 ? 8 : 5, EnemyRegistry.basic));
+      result.addAll(List.filled(w == 10 ? 4 : 2, EnemyRegistry.tank));
+      return result;
     }
     final base = 8 + w * 2;
     for (int i = 0; i < base; i++) {
@@ -252,8 +273,16 @@ class TdGame extends FlameGame with HasGameReference {
       } else {
         pick = EnemyRegistry.basic;
       }
-      _waveQueue.add(pick);
+      result.add(pick);
     }
+    return result;
+  }
+
+  void _updateWavePreview() {
+    final nextWave = wave + 1;
+    wavePreviewNotifier.value = nextWave <= maxWaves && !runEnded
+        ? _buildWaveList(nextWave)
+        : [];
   }
 
   void _flashMessage(String msg) {
@@ -292,14 +321,16 @@ class TdGame extends FlameGame with HasGameReference {
   void _spawnNextEnemy() {
     if (_waveQueue.isEmpty) return;
     final def = _waveQueue.removeAt(0);
-    add(EnemyComponent(
-      def: def,
-      waypoints: currentMap.waypoints,
-      onKilled: _onEnemyKilled,
-      onLeaked: _onEnemyLeaked,
-      hpMultiplier: stats.enemyHpMul,
-      speedMultiplier: stats.enemySpeedMul,
-    ));
+    add(
+      EnemyComponent(
+        def: def,
+        waypoints: currentMap.waypoints,
+        onKilled: _onEnemyKilled,
+        onLeaked: _onEnemyLeaked,
+        hpMultiplier: stats.enemyHpMul,
+        speedMultiplier: stats.enemySpeedMul,
+      ),
+    );
     waveEnemiesRemaining = _waveQueue.length;
   }
 
@@ -322,21 +353,20 @@ class TdGame extends FlameGame with HasGameReference {
 
   void _showCardSelection() {
     final offered = cardPool.drawThree();
-    for (final c in offered) { cardPool.onOffered(c); }
+    for (final c in offered) {
+      cardPool.onOffered(c);
+    }
     cardSelectNotifier.value = offered;
     pauseEngine();
   }
 
   void pickCard(TowerCard card) {
-    final isDuplicate = unlockedTowers.any((c) => c.id == card.id);
-    if (isDuplicate) {
-      gold += 30;
-      goldNotifier.value = gold;
-    } else {
-      unlockedTowers.add(card);
-      unlockedNotifier.value = List.from(unlockedTowers);
-      selectTower(card);
-    }
+    stats.trainTower(card.id);
+    gold += 15;
+    goldNotifier.value = gold;
+    _flashMessage(
+      '${card.name} training Lv.${stats.towerTrainingLevel(card.id)}',
+    );
     cardPool.onPicked(card);
     cardPool.recoverWeights();
     cardSelectNotifier.value = null;
@@ -414,6 +444,7 @@ class TdGame extends FlameGame with HasGameReference {
     goldNotifier.value = gold;
     waveNotifier.value = 0;
     messageNotifier.value = null;
+    wavePreviewNotifier.value = [];
     runResultNotifier.value = null;
 
     activeModifier = null;
@@ -430,8 +461,8 @@ class TdGame extends FlameGame with HasGameReference {
 
     _clearMap();
     _buildMap(PathData.random());
+    _updateWavePreview();
     resumeEngine();
     _showModifierSelection();
   }
 }
-

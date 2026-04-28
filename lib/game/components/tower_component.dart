@@ -7,6 +7,7 @@ import '../../models/run_stats.dart';
 import '../../models/tower_card.dart';
 import 'enemy_component.dart';
 import 'particle_effect.dart';
+import 'tower_slot.dart';
 
 /// Yerleştirilmiş tower. Range içindeki düşmanları tarayıp ateş eder.
 /// MVP'de projectile yok — instant hit + flash + particle efekti.
@@ -15,8 +16,10 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   final TargetingMode targeting;
   final void Function(TowerComponent) onTap;
   final RunStats stats;
+  final TowerSlot slot;
 
   int level = 1; // 1..3
+  late int investedGold;
 
   double _cooldown = 0;
   EnemyComponent? _currentTarget;
@@ -51,8 +54,13 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   double get _rangeMul => 1.0 + (level - 1) * 0.10;
   double get _fireRateMul => 1.0 + (level - 1) * 0.20;
 
-  double get currentDamage => card.damage * _damageMul * stats.damageMul;
-  double get currentRange => card.range * _rangeMul * stats.rangeMul;
+  double get currentDamage =>
+      card.damage *
+      _damageMul *
+      stats.damageMul *
+      stats.towerDamageMul(card.id);
+  double get currentRange =>
+      card.range * _rangeMul * stats.rangeMul * stats.towerRangeMul(card.id);
   double get currentFireRate =>
       card.fireRate * _fireRateMul * stats.fireRateMul;
 
@@ -68,6 +76,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     required Vector2 worldPosition,
     required this.onTap,
     required this.stats,
+    required this.slot,
     this.targeting = TargetingMode.first,
   }) : super(
          position: worldPosition,
@@ -75,6 +84,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
          anchor: Anchor.center,
          priority: 4,
        ) {
+    investedGold = card.baseCost;
     _bodyPaint = Paint()..color = card.color;
     _accentPaint = Paint()..color = _lighten(card.color, 0.25);
     _strokePaint = Paint()

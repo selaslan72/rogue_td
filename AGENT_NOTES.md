@@ -127,3 +127,13 @@ Projeye uygun öneriler:
   achievement görevleri.
 - **Mobil kalite:** offline-first, hızlı yeniden başlatma, düşük batarya modu,
   net dokunmatik hedefler, landscape/portrait seçeneği.
+
+### 2026-04-29 — Codex feature pass
+
+- HUD'a **NEXT wave preview** eklendi. Sıradaki wave düşman türlerini küçük
+  ikon + adet olarak gösteriyor.
+- Upgrade paneline **SELL** eklendi. Tower toplam yatırımının %60'ını iade
+  ediyor ve slot'u yeniden boşaltıyor.
+- Wave sonu kart seçimi **tower training** sistemine çevrildi. Tüm tower'lar
+  baştan açık kalıyor; seçilen kart run boyunca o tower tipine +10% damage ve
+  +5% range veriyor, yanında küçük +15 gold ekonomi desteği bırakıyor.

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../game/components/tower_component.dart';
 import '../game/td_game.dart';
+import '../models/enemy_def.dart';
 import '../models/run_modifier.dart';
 import '../models/run_result.dart';
 import '../models/tower_card.dart';
@@ -61,54 +62,123 @@ class _TopHud extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       color: const Color(0xFF1A1A2E),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          ValueListenableBuilder<int>(
-            valueListenable: game.livesNotifier,
-            builder: (_, lives, _) => _HudChip(
-              icon: '❤️',
-              label: '$lives',
-              color: const Color(0xFFEF4444),
-            ),
-          ),
-          Column(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               ValueListenableBuilder<int>(
-                valueListenable: game.waveNotifier,
-                builder: (_, wave, _) => Text(
-                  'WAVE $wave',
-                  style: const TextStyle(
-                    color: Color(0xFFFBBF24),
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
+                valueListenable: game.livesNotifier,
+                builder: (_, lives, _) => _HudChip(
+                  icon: '❤️',
+                  label: '$lives',
+                  color: const Color(0xFFEF4444),
                 ),
               ),
-              ValueListenableBuilder<String?>(
-                valueListenable: game.messageNotifier,
-                builder: (_, msg, _) => SizedBox(
-                  height: 16,
-                  child: msg == null
-                      ? null
-                      : Text(
-                          msg,
-                          style: const TextStyle(
-                            color: Color(0xFFFBBF24),
-                            fontSize: 11,
-                          ),
-                        ),
+              Column(
+                children: [
+                  ValueListenableBuilder<int>(
+                    valueListenable: game.waveNotifier,
+                    builder: (_, wave, _) => Text(
+                      'WAVE $wave',
+                      style: const TextStyle(
+                        color: Color(0xFFFBBF24),
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ),
+                  ValueListenableBuilder<String?>(
+                    valueListenable: game.messageNotifier,
+                    builder: (_, msg, _) => SizedBox(
+                      height: 16,
+                      child: msg == null
+                          ? null
+                          : Text(
+                              msg,
+                              style: const TextStyle(
+                                color: Color(0xFFFBBF24),
+                                fontSize: 11,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+              ValueListenableBuilder<int>(
+                valueListenable: game.goldNotifier,
+                builder: (_, gold, _) => _HudChip(
+                  icon: '💰',
+                  label: '$gold',
+                  color: const Color(0xFFFBBF24),
                 ),
               ),
             ],
           ),
-          ValueListenableBuilder<int>(
-            valueListenable: game.goldNotifier,
-            builder: (_, gold, _) => _HudChip(
-              icon: '💰',
-              label: '$gold',
-              color: const Color(0xFFFBBF24),
+          ValueListenableBuilder<List<EnemyDef>>(
+            valueListenable: game.wavePreviewNotifier,
+            builder: (_, preview, _) => _WavePreview(enemies: preview),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WavePreview extends StatelessWidget {
+  final List<EnemyDef> enemies;
+  const _WavePreview({required this.enemies});
+
+  static const _enemyIcons = {
+    EnemyKind.fast: '⚡',
+    EnemyKind.basic: '●',
+    EnemyKind.tank: '■',
+    EnemyKind.flying: '◆',
+    EnemyKind.boss: '★',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    if (enemies.isEmpty) return const SizedBox.shrink();
+    final counts = <EnemyKind, int>{};
+    for (final enemy in enemies) {
+      counts[enemy.kind] = (counts[enemy.kind] ?? 0) + 1;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'NEXT',
+            style: TextStyle(
+              color: Colors.white38,
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.4,
+            ),
+          ),
+          const SizedBox(width: 8),
+          ...counts.entries.map(
+            (entry) => Container(
+              margin: const EdgeInsets.only(right: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white10,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Text(
+                '${_enemyIcons[entry.key]} ${entry.value}',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ),
         ],
@@ -121,7 +191,11 @@ class _HudChip extends StatelessWidget {
   final String icon;
   final String label;
   final Color color;
-  const _HudChip({required this.icon, required this.label, required this.color});
+  const _HudChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -218,50 +292,98 @@ class _UpgradePanel extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _StatChip(label: 'DMG', value: tower.currentDamage.toStringAsFixed(1)),
-              _StatChip(label: 'RNG', value: tower.currentRange.toStringAsFixed(0)),
-              _StatChip(label: 'SPD', value: tower.currentFireRate.toStringAsFixed(2)),
+              _StatChip(
+                label: 'DMG',
+                value: tower.currentDamage.toStringAsFixed(1),
+              ),
+              _StatChip(
+                label: 'RNG',
+                value: tower.currentRange.toStringAsFixed(0),
+              ),
+              _StatChip(
+                label: 'SPD',
+                value: tower.currentFireRate.toStringAsFixed(2),
+              ),
             ],
           ),
           const SizedBox(height: 10),
           // Upgrade / max
           if (!canUp)
-            const Text(
-              'MAX LEVEL',
-              style: TextStyle(
-                color: Color(0xFFFBBF24),
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5,
-              ),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'MAX LEVEL',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFFFBBF24),
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+                _SellButton(game: game, tower: tower),
+              ],
             )
           else
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: hasGold ? () => game.tryUpgradeTower(tower) : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: hasGold
-                      ? card.color
-                      : Colors.white12,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: hasGold
+                        ? () => game.tryUpgradeTower(tower)
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: hasGold ? card.color : Colors.white12,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      hasGold ? 'UPGRADE  💰$cost' : 'Need 💰$cost',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        letterSpacing: 1,
+                      ),
+                    ),
                   ),
                 ),
-                child: Text(
-                  hasGold
-                      ? 'UPGRADE  💰$cost'
-                      : 'Need 💰$cost',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
+                const SizedBox(width: 8),
+                _SellButton(game: game, tower: tower),
+              ],
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _SellButton extends StatelessWidget {
+  final TdGame game;
+  final TowerComponent tower;
+  const _SellButton({required this.game, required this.tower});
+
+  @override
+  Widget build(BuildContext context) {
+    final refund = (tower.investedGold * 0.6).round();
+    return OutlinedButton(
+      onPressed: () => game.sellTower(tower),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.white70,
+        side: const BorderSide(color: Colors.white24),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: Text(
+        'SELL 💰$refund',
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+          letterSpacing: 0.6,
+        ),
       ),
     );
   }
@@ -300,7 +422,7 @@ class _CardSelectOverlay extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Choose a Tower',
+                    'Train a Tower',
                     style: TextStyle(color: Colors.white54, fontSize: 13),
                   ),
                   const SizedBox(height: 20),
@@ -334,7 +456,7 @@ class _CardOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final alreadyOwned = game.unlockedTowers.any((c) => c.id == card.id);
+    final trainingLevel = game.stats.towerTrainingLevel(card.id);
     return GestureDetector(
       onTap: () => game.pickCard(card),
       child: Container(
@@ -366,9 +488,13 @@ class _CardOption extends StatelessWidget {
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 1),
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
-                          color: _rarityColor[card.rarity]!.withValues(alpha: 0.15),
+                          color: _rarityColor[card.rarity]!.withValues(
+                            alpha: 0.15,
+                          ),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -385,7 +511,7 @@ class _CardOption extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    card.description,
+                    '+10% damage, +5% range for every ${card.name}',
                     style: const TextStyle(color: Colors.white54, fontSize: 11),
                   ),
                 ],
@@ -396,18 +522,17 @@ class _CardOption extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '💰${card.baseCost}',
+                  'Lv.${trainingLevel + 1}',
                   style: const TextStyle(
                     color: Color(0xFFFBBF24),
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                if (alreadyOwned)
-                  const Text(
-                    '+30g',
-                    style: TextStyle(color: Colors.white38, fontSize: 10),
-                  ),
+                const Text(
+                  '+15g',
+                  style: TextStyle(color: Colors.white38, fontSize: 10),
+                ),
               ],
             ),
           ],
@@ -664,10 +789,7 @@ class _RunResultOverlay extends StatelessWidget {
                           label: 'Wave Reached',
                           value: '${result.waveReached} / 15',
                         ),
-                        _ResultRow(
-                          label: 'Map',
-                          value: result.mapName,
-                        ),
+                        _ResultRow(label: 'Map', value: result.mapName),
                         _ResultRow(
                           label: 'Final Gold',
                           value: '💰 ${result.finalGold}',
@@ -687,8 +809,12 @@ class _RunResultOverlay extends StatelessWidget {
                         Wrap(
                           spacing: 6,
                           children: result.towersUsed
-                              .map((t) =>
-                                  Text(t.icon, style: const TextStyle(fontSize: 22)))
+                              .map(
+                                (t) => Text(
+                                  t.icon,
+                                  style: const TextStyle(fontSize: 22),
+                                ),
+                              )
                               .toList(),
                         ),
                       ],
@@ -713,8 +839,7 @@ class _RunResultOverlay extends StatelessWidget {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
                             side: const BorderSide(color: Colors.white24),
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           icon: const Icon(Icons.share, size: 16),
                           label: const Text('SHARE'),
@@ -728,8 +853,7 @@ class _RunResultOverlay extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFBBF24),
                             foregroundColor: Colors.black,
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 12),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                           child: const Text(
                             'NEW RUN',
@@ -765,14 +889,18 @@ class _ResultRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style: const TextStyle(color: Colors.white60, fontSize: 12)),
-          Text(value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              )),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white60, fontSize: 12),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );
