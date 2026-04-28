@@ -1,0 +1,34 @@
+name: rogue_td
+description: "Roguelike Tower Defense — every run different, every wave a new card."
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Game engine
+  flame: ^1.20.0
+  flame_audio: ^2.10.0
+
+  # Meta progression
+  sqflite: ^2.3.3
+  path_provider: ^2.1.4
+
+  # Run result paylaşımı (Sprint 2'de aktifleşecek)
+  share_plus: ^10.0.0
+  screenshot: ^3.0.0
+
+  # Utility
+  uuid: ^4.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
