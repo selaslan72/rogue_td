@@ -338,10 +338,11 @@ class TdGame extends FlameGame with HasGameReference {
   // ─── Modifier seçim akışı (run başı) ──────────────────────────────────────
 
   void _showModifierSelection() {
-    // pauseEngine yok: cold-load'da engine henüz başlamadan pause
-    // çağırırsak component'lar mount olmuyor → siyah ekran. Modifier
-    // seçilene kadar input zaten _handleSlotTap içinde gate'leniyor.
-    modifierSelectNotifier.value = ModifierRegistry.drawThree();
+    // Bir tick geciktir: cold-load'da onLoad henüz bitmeden notifier'ı
+    // tetiklersek widget tree ilk frame'de overlay'i tam çizemiyor.
+    Future.microtask(() {
+      modifierSelectNotifier.value = ModifierRegistry.drawThree();
+    });
   }
 
   void pickModifier(RunModifier mod) {
