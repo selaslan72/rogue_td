@@ -452,55 +452,62 @@ class _TowerSelector extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       color: const Color(0xFF1A1A2E),
-      child: ValueListenableBuilder<List<TowerCard>>(
-        valueListenable: game.unlockedNotifier,
-        builder: (_, unlocked, _) => ValueListenableBuilder<TowerCard>(
-          valueListenable: game.selectedTowerNotifier,
-          builder: (_, selected, _) => Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: unlocked.map((card) {
-            final isSelected = card.id == selected.id;
-            return GestureDetector(
-              onTap: () => game.selectTower(card),
-              child: Container(
-                width: 64,
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? card.color.withValues(alpha: 0.2)
-                      : Colors.transparent,
-                  border: Border.all(
-                    color: isSelected ? card.color : Colors.white24,
-                    width: isSelected ? 2 : 1,
+      child: SizedBox(
+        height: 70,
+        child: ValueListenableBuilder<List<TowerCard>>(
+          valueListenable: game.unlockedNotifier,
+          builder: (_, unlocked, _) => ValueListenableBuilder<TowerCard>(
+            valueListenable: game.selectedTowerNotifier,
+            builder: (_, selected, _) => ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              itemCount: unlocked.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 6),
+              itemBuilder: (_, i) {
+                final card = unlocked[i];
+                final isSelected = card.id == selected.id;
+                return GestureDetector(
+                  onTap: () => game.selectTower(card),
+                  child: Container(
+                    width: 64,
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? card.color.withValues(alpha: 0.2)
+                          : Colors.transparent,
+                      border: Border.all(
+                        color: isSelected ? card.color : Colors.white24,
+                        width: isSelected ? 2 : 1,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(card.icon, style: const TextStyle(fontSize: 22)),
+                        const SizedBox(height: 2),
+                        Text(
+                          card.name,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.white70,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '💰 ${card.baseCost}',
+                          style: const TextStyle(
+                            color: Color(0xFFFBBF24),
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(card.icon, style: const TextStyle(fontSize: 22)),
-                    const SizedBox(height: 2),
-                    Text(
-                      card.name,
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.white70,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '💰 ${card.baseCost}',
-                      style: const TextStyle(
-                        color: Color(0xFFFBBF24),
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-            }).toList(),
+                );
+              },
+            ),
           ),
         ),
       ),

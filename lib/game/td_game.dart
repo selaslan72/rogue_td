@@ -37,7 +37,7 @@ class TdGame extends FlameGame with HasGameReference {
   GameMap currentMap = PathData.snake;
   RunModifier? activeModifier;
   final RunStats stats = RunStats();
-  final List<TowerCard> unlockedTowers = [TowerRegistry.archer];
+  final List<TowerCard> unlockedTowers = List.from(TowerRegistry.all);
 
   // ─── Notifier'lar (UI'ya yansır) ──────────────────────────────────────────
   final ValueNotifier<int> livesNotifier = ValueNotifier(initialLives);
@@ -45,7 +45,7 @@ class TdGame extends FlameGame with HasGameReference {
   final ValueNotifier<int> waveNotifier = ValueNotifier(0);
   final ValueNotifier<String?> messageNotifier = ValueNotifier(null);
   final ValueNotifier<List<TowerCard>> unlockedNotifier =
-      ValueNotifier([TowerRegistry.archer]);
+      ValueNotifier(List.from(TowerRegistry.all));
 
   TowerCard selectedTower = TowerRegistry.archer;
   final ValueNotifier<TowerCard> selectedTowerNotifier =
@@ -409,7 +409,7 @@ class TdGame extends FlameGame with HasGameReference {
     stats.reset();
     unlockedTowers
       ..clear()
-      ..add(TowerRegistry.archer);
+      ..addAll(TowerRegistry.all);
     unlockedNotifier.value = List.from(unlockedTowers);
     selectedTower = TowerRegistry.archer;
     selectedTowerNotifier.value = TowerRegistry.archer;
