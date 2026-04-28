@@ -18,30 +18,38 @@ class TowerSlot extends PositionComponent with TapCallbacks {
     ..color = const Color(0x66FBBF24)
     ..style = PaintingStyle.fill;
 
-  static const double radius = 24;
+  static final _centerPaint = Paint()..color = const Color(0x55FFFFFF);
 
-  TowerSlot({
-    required Vector2 worldPosition,
-    required this.onTap,
-  }) : super(
-          position: worldPosition,
-          size: Vector2.all(radius * 2),
-          anchor: Anchor.center,
-        );
+  static const double side = 48;
+  static const double cornerRadius = 4;
+
+  TowerSlot({required Vector2 worldPosition, required this.onTap})
+    : super(
+        position: worldPosition,
+        size: Vector2.all(side),
+        anchor: Anchor.center,
+      );
 
   @override
   void render(Canvas canvas) {
     if (isOccupied) return;
-    final center = Offset(size.x / 2, size.y / 2);
+    final rect = Rect.fromLTWH(0, 0, size.x, size.y);
+    final rrect = RRect.fromRectAndRadius(
+      rect.deflate(2),
+      const Radius.circular(cornerRadius),
+    );
     if (isHighlighted) {
-      canvas.drawCircle(center, radius, _highlightPaint);
+      canvas.drawRRect(rrect, _highlightPaint);
     }
-    canvas.drawCircle(center, radius, _emptyPaint);
-    // İç dot
-    canvas.drawCircle(
-      center,
-      4,
-      Paint()..color = const Color(0x55FFFFFF),
+    canvas.drawRRect(rrect, _emptyPaint);
+
+    final center = Offset(size.x / 2, size.y / 2);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: center, width: 8, height: 8),
+        const Radius.circular(2),
+      ),
+      _centerPaint,
     );
   }
 

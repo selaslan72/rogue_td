@@ -137,3 +137,10 @@ Projeye uygun öneriler:
 - Wave sonu kart seçimi **tower training** sistemine çevrildi. Tüm tower'lar
   baştan açık kalıyor; seçilen kart run boyunca o tower tipine +10% damage ve
   +5% range veriyor, yanında küçük +15 gold ekonomi desteği bırakıyor.
+
+### 2026-04-29 — Codex UI cleanup
+
+- Bottom tower selector artık Column'da ayrı bir opaque bar değil; oyun üstünde
+  sağa yaslı, yarı şeffaf kartlardan oluşan overlay.
+- Selector kart yüksekliği artırıldı; Chrome'daki bottom overflow kaldırıldı.
+- Tower slot görselleri daireden kare outline'a çevrildi.

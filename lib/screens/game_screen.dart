@@ -38,6 +38,12 @@ class _GameScreenState extends State<GameScreen> {
                 fit: StackFit.expand,
                 children: [
                   GameWidget(game: _game),
+                  Positioned(
+                    right: 12,
+                    bottom: 8,
+                    left: 92,
+                    child: _TowerSelector(game: _game),
+                  ),
                   Positioned.fill(child: _UpgradeOverlay(game: _game)),
                   Positioned.fill(child: _CardSelectOverlay(game: _game)),
                   Positioned.fill(child: _ModifierSelectOverlay(game: _game)),
@@ -45,7 +51,6 @@ class _GameScreenState extends State<GameScreen> {
                 ],
               ),
             ),
-            _TowerSelector(game: _game),
           ],
         ),
       ),
@@ -574,65 +579,64 @@ class _TowerSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      color: const Color(0xFF1A1A2E),
-      child: SizedBox(
-        height: 70,
-        child: ValueListenableBuilder<List<TowerCard>>(
-          valueListenable: game.unlockedNotifier,
-          builder: (_, unlocked, _) => ValueListenableBuilder<TowerCard>(
-            valueListenable: game.selectedTowerNotifier,
-            builder: (_, selected, _) => ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              itemCount: unlocked.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 6),
-              itemBuilder: (_, i) {
-                final card = unlocked[i];
-                final isSelected = card.id == selected.id;
-                return GestureDetector(
-                  onTap: () => game.selectTower(card),
-                  child: Container(
-                    width: 64,
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? card.color.withValues(alpha: 0.2)
-                          : Colors.transparent,
-                      border: Border.all(
-                        color: isSelected ? card.color : Colors.white24,
-                        width: isSelected ? 2 : 1,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
+    return SizedBox(
+      height: 92,
+      child: ValueListenableBuilder<List<TowerCard>>(
+        valueListenable: game.unlockedNotifier,
+        builder: (_, unlocked, _) => ValueListenableBuilder<TowerCard>(
+          valueListenable: game.selectedTowerNotifier,
+          builder: (_, selected, _) => ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            itemCount: unlocked.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (_, i) {
+              final card = unlocked[i];
+              final isSelected = card.id == selected.id;
+              return GestureDetector(
+                onTap: () => game.selectTower(card),
+                child: Container(
+                  width: 76,
+                  padding: const EdgeInsets.symmetric(vertical: 7),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? card.color.withValues(alpha: 0.35)
+                        : const Color(0x661A1A2E),
+                    border: Border.all(
+                      color: isSelected ? card.color : Colors.white30,
+                      width: isSelected ? 2 : 1,
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(card.icon, style: const TextStyle(fontSize: 22)),
-                        const SizedBox(height: 2),
-                        Text(
-                          card.name,
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.white70,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '💰 ${card.baseCost}',
-                          style: const TextStyle(
-                            color: Color(0xFFFBBF24),
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                );
-              },
-            ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(card.icon, style: const TextStyle(fontSize: 24)),
+                      const SizedBox(height: 3),
+                      Text(
+                        card.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.white70,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '💰 ${card.baseCost}',
+                        style: const TextStyle(
+                          color: Color(0xFFFBBF24),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),
