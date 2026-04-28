@@ -43,18 +43,17 @@ class EnemyComponent extends PositionComponent {
     required this.onLeaked,
     double hpMultiplier = 1.0,
     double speedMultiplier = 1.0,
-  })  : _hpMul = hpMultiplier,
-        _speedMul = speedMultiplier,
-        super(
-          position: waypoints.first.clone(),
-          size: Vector2.all(20 * def.sizeScale),
-          anchor: Anchor.center,
-          priority: def.isBoss ? 6 : 5,
-        ) {
+  }) : _hpMul = hpMultiplier,
+       _speedMul = speedMultiplier,
+       super(
+         position: waypoints.first.clone(),
+         size: Vector2.all(20 * def.sizeScale),
+         anchor: Anchor.center,
+         priority: def.isBoss ? 6 : 5,
+       ) {
     _hp = def.maxHp * _hpMul;
     _bodyPaint = Paint()..color = def.color;
-    _helmetPaint = Paint()
-      ..color = Color.lerp(def.color, Colors.black, 0.45)!;
+    _helmetPaint = Paint()..color = Color.lerp(def.color, Colors.black, 0.45)!;
   }
 
   final double _hpMul;
@@ -63,6 +62,18 @@ class EnemyComponent extends PositionComponent {
   double get hpRatio => (_hp / (def.maxHp * _hpMul)).clamp(0.0, 1.0);
   bool get isAlive => _hp > 0;
   Vector2 get worldPosition => position;
+  double get pathProgress {
+    if (waypoints.length < 2) return 0;
+    if (_waypointIndex >= waypoints.length) return waypoints.length.toDouble();
+
+    final previous = waypoints[_waypointIndex - 1];
+    final target = waypoints[_waypointIndex];
+    final segmentLength = previous.distanceTo(target);
+    if (segmentLength <= 0) return (_waypointIndex - 1).toDouble();
+
+    final segmentProgress = previous.distanceTo(position) / segmentLength;
+    return (_waypointIndex - 1) + segmentProgress.clamp(0.0, 1.0);
+  }
 
   void takeDamage(double amount) {
     if (!isAlive) return;
@@ -70,12 +81,14 @@ class EnemyComponent extends PositionComponent {
     _hp -= effective;
     if (_hp <= 0) {
       _hp = 0;
-      parent?.add(ParticleEffect(
-        worldPosition: worldPosition.clone(),
-        color: def.color,
-        duration: 0.45,
-        maxRadius: def.isBoss ? 28 : 16,
-      ));
+      parent?.add(
+        ParticleEffect(
+          worldPosition: worldPosition.clone(),
+          color: def.color,
+          duration: 0.45,
+          maxRadius: def.isBoss ? 28 : 16,
+        ),
+      );
       onKilled(this);
       removeFromParent();
     }
@@ -190,22 +203,42 @@ class EnemyComponent extends PositionComponent {
     final isTank = def.kind == EnemyKind.tank;
 
     // Per-type body proportions
-    final double headR   = isTank ? 3.5 : isFast ? 2.5 : 3.0;
-    final double headCY  = isTank ? 5.0 : 4.0;
-    final double bodyW   = isTank ? 12.0 : isFast ? 6.0 : 8.0;
-    final double bodyH   = isTank ? 7.0  : isFast ? 5.0 : 6.0;
+    final double headR = isTank
+        ? 3.5
+        : isFast
+        ? 2.5
+        : 3.0;
+    final double headCY = isTank ? 5.0 : 4.0;
+    final double bodyW = isTank
+        ? 12.0
+        : isFast
+        ? 6.0
+        : 8.0;
+    final double bodyH = isTank
+        ? 7.0
+        : isFast
+        ? 5.0
+        : 6.0;
     final double bodyTop = headCY + headR + 1.0;
     final double bodyBot = bodyTop + bodyH;
-    final double legW    = isTank ? 3.0 : isFast ? 1.5 : 2.0;
-    final double legH    = (size.y - bodyBot).clamp(2.0, 9.0);
-    final double legGap  = isTank ? 3.0 : 2.0;
-    final double armW    = isTank ? 3.0 : 2.0;
-    final double armH    = isTank ? 6.0 : 4.0;
+    final double legW = isTank
+        ? 3.0
+        : isFast
+        ? 1.5
+        : 2.0;
+    final double legH = (size.y - bodyBot).clamp(2.0, 9.0);
+    final double legGap = isTank ? 3.0 : 2.0;
+    final double armW = isTank ? 3.0 : 2.0;
+    final double armH = isTank ? 6.0 : 4.0;
     final double helmetW = headR * 2.3;
     final double helmetH = isTank ? 3.0 : 2.0;
 
     // Leg swing animation
-    final double speed = isFast ? 10.0 : isTank ? 5.0 : 7.0;
+    final double speed = isFast
+        ? 10.0
+        : isTank
+        ? 5.0
+        : 7.0;
     final double swing = sin(_animTime * speed) * 0.8;
 
     final double lLegX = cx - legW - legGap / 2;
@@ -298,7 +331,6 @@ class EnemyComponent extends PositionComponent {
     final barW = size.x;
     const barY = -8.0;
     canvas.drawRect(Rect.fromLTWH(0, barY, barW, barH), _hpBgPaint);
-    canvas.drawRect(
-        Rect.fromLTWH(0, barY, barW * hpRatio, barH), _hpFillPaint);
+    canvas.drawRect(Rect.fromLTWH(0, barY, barW * hpRatio, barH), _hpFillPaint);
   }
 }

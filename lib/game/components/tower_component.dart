@@ -43,13 +43,18 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   bool showRange = false;
 
   // Level çarpanları
-  double get _damageMul => level == 1 ? 1.0 : level == 2 ? 1.5 : 2.0;
+  double get _damageMul => level == 1
+      ? 1.0
+      : level == 2
+      ? 1.5
+      : 2.0;
   double get _rangeMul => 1.0 + (level - 1) * 0.10;
   double get _fireRateMul => 1.0 + (level - 1) * 0.20;
 
   double get currentDamage => card.damage * _damageMul * stats.damageMul;
   double get currentRange => card.range * _rangeMul * stats.rangeMul;
-  double get currentFireRate => card.fireRate * _fireRateMul * stats.fireRateMul;
+  double get currentFireRate =>
+      card.fireRate * _fireRateMul * stats.fireRateMul;
 
   bool get canUpgrade => level < 3;
   int get upgradeCost => (card.baseCost * (level == 1 ? 1.0 : 1.5)).round();
@@ -65,11 +70,11 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     required this.stats,
     this.targeting = TargetingMode.first,
   }) : super(
-          position: worldPosition,
-          size: Vector2.all(36),
-          anchor: Anchor.center,
-          priority: 4,
-        ) {
+         position: worldPosition,
+         size: Vector2.all(36),
+         anchor: Anchor.center,
+         priority: 4,
+       ) {
     _bodyPaint = Paint()..color = card.color;
     _accentPaint = Paint()..color = _lighten(card.color, 0.25);
     _strokePaint = Paint()
@@ -118,25 +123,24 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   }
 
   EnemyComponent? _acquireTarget() {
-    final enemies = parent?.children.whereType<EnemyComponent>().where(_inRange);
+    final enemies = parent?.children.whereType<EnemyComponent>().where(
+      _inRange,
+    );
     if (enemies == null || enemies.isEmpty) return null;
 
     switch (targeting) {
       case TargetingMode.first:
         return enemies.reduce(
-          (a, b) => a.worldPosition.y > b.worldPosition.y ? a : b,
+          (a, b) => a.pathProgress > b.pathProgress ? a : b,
         );
       case TargetingMode.strongest:
-        return enemies.reduce(
-          (a, b) => a.def.maxHp > b.def.maxHp ? a : b,
-        );
+        return enemies.reduce((a, b) => a.def.maxHp > b.def.maxHp ? a : b);
       case TargetingMode.weakest:
-        return enemies.reduce(
-          (a, b) => a.hpRatio < b.hpRatio ? a : b,
-        );
+        return enemies.reduce((a, b) => a.hpRatio < b.hpRatio ? a : b);
       case TargetingMode.closest:
         return enemies.reduce(
-          (a, b) => a.worldPosition.distanceTo(position) <
+          (a, b) =>
+              a.worldPosition.distanceTo(position) <
                   b.worldPosition.distanceTo(position)
               ? a
               : b,
@@ -145,12 +149,14 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   }
 
   void _spawnHit(Vector2 worldPos) {
-    parent?.add(ParticleEffect(
-      worldPosition: worldPos,
-      color: card.color,
-      duration: 0.3,
-      maxRadius: 10,
-    ));
+    parent?.add(
+      ParticleEffect(
+        worldPosition: worldPos,
+        color: card.color,
+        duration: 0.3,
+        maxRadius: 10,
+      ),
+    );
   }
 
   void _fire(EnemyComponent target) {
@@ -165,7 +171,8 @@ class TowerComponent extends PositionComponent with TapCallbacks {
         final others = parent?.children.whereType<EnemyComponent>() ?? [];
         for (final e in others) {
           if (e != target &&
-              e.worldPosition.distanceTo(target.worldPosition) <= splashRadius) {
+              e.worldPosition.distanceTo(target.worldPosition) <=
+                  splashRadius) {
             e.takeDamage(currentDamage * 0.6);
           }
         }
@@ -178,7 +185,9 @@ class TowerComponent extends PositionComponent with TapCallbacks {
         _spawnHit(target.worldPosition.clone());
       case TowerType.chain:
         // Tesla = 2 zincir, Lightning = 3, Frost King = 3, default 2
-        final chainCount = card.id == 'lightning' || card.id == 'frost-king' ? 3 : 2;
+        final chainCount = card.id == 'lightning' || card.id == 'frost-king'
+            ? 3
+            : 2;
         target.takeDamage(currentDamage);
         _spawnHit(target.worldPosition.clone());
         var lastHit = target;
@@ -283,7 +292,12 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     }
   }
 
-  void _withRotation(Canvas canvas, Offset center, double angle, void Function() draw) {
+  void _withRotation(
+    Canvas canvas,
+    Offset center,
+    double angle,
+    void Function() draw,
+  ) {
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(angle);
@@ -307,13 +321,22 @@ class TowerComponent extends PositionComponent with TapCallbacks {
       canvas.drawArc(rect, -math.pi / 2.2, math.pi / 1.1, false, bowPaint);
       // Kiriş
       canvas.drawLine(
-          Offset(-4, -radius * 0.85), Offset(-4, radius * 0.85),
-          Paint()..color = Colors.white70..strokeWidth = 1);
+        Offset(-4, -radius * 0.85),
+        Offset(-4, radius * 0.85),
+        Paint()
+          ..color = Colors.white70
+          ..strokeWidth = 1,
+      );
       // Ok (lar)
       final arrowLen = lvl == 3 ? 14.0 : 11.0;
       void drawArrow(double dy) {
-        canvas.drawLine(Offset(-4, dy), Offset(arrowLen - 4, dy),
-            Paint()..color = Colors.white..strokeWidth = 1.4);
+        canvas.drawLine(
+          Offset(-4, dy),
+          Offset(arrowLen - 4, dy),
+          Paint()
+            ..color = Colors.white
+            ..strokeWidth = 1.4,
+        );
         final tip = Path()
           ..moveTo(arrowLen - 1, dy)
           ..lineTo(arrowLen - 5, dy - 3)
@@ -321,13 +344,18 @@ class TowerComponent extends PositionComponent with TapCallbacks {
           ..close();
         canvas.drawPath(tip, _whitePaint);
       }
+
       if (lvl == 3) {
         drawArrow(-3);
         drawArrow(3);
         // Crossbow: ikinci ark
         canvas.drawArc(
-            Rect.fromCircle(center: const Offset(-7, 0), radius: 8),
-            -math.pi / 2.2, math.pi / 1.1, false, bowPaint);
+          Rect.fromCircle(center: const Offset(-7, 0), radius: 8),
+          -math.pi / 2.2,
+          math.pi / 1.1,
+          false,
+          bowPaint,
+        );
       } else {
         drawArrow(0);
       }
@@ -356,7 +384,8 @@ class TowerComponent extends PositionComponent with TapCallbacks {
           final a = i * math.pi / 2 + math.pi / 4;
           canvas.drawCircle(
             Offset(math.cos(a) * (bodyR - 1.5), math.sin(a) * (bodyR - 1.5)),
-            1.0, boltPaint,
+            1.0,
+            boltPaint,
           );
         }
       }
@@ -364,10 +393,16 @@ class TowerComponent extends PositionComponent with TapCallbacks {
         final length = lvl == 1 ? 9.0 : (lvl == 2 ? 13.0 : 12.0);
         final width = lvl == 1 ? 6.0 : (lvl == 2 ? 8.0 : 6.0);
         canvas.drawRect(
-            Rect.fromLTWH(2, dy - width / 2, length, width), _darkPaint);
+          Rect.fromLTWH(2, dy - width / 2, length, width),
+          _darkPaint,
+        );
         canvas.drawCircle(
-            Offset(2 + length, dy), width / 2 + 0.5, _strokePaint);
+          Offset(2 + length, dy),
+          width / 2 + 0.5,
+          _strokePaint,
+        );
       }
+
       if (lvl == 3) {
         drawBarrel(-3.5);
         drawBarrel(3.5);
@@ -445,6 +480,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
         canvas.drawPath(cone, _accentPaint);
         canvas.drawPath(cone, _strokePaint);
       }
+
       if (lvl == 3) {
         drawNozzle(-4);
         drawNozzle(4);
@@ -463,17 +499,21 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     final showSpark = lvl >= 2;
     // Bar
     canvas.drawRect(
-        Rect.fromLTWH(center.dx - 1.5, center.dy - 10, 3, 20), _darkPaint);
+      Rect.fromLTWH(center.dx - 1.5, center.dy - 10, 3, 20),
+      _darkPaint,
+    );
     final h = 18.0 / (disks + 1);
     final diskW = lvl == 3 ? 16.0 : 14.0;
     for (int i = 0; i < disks; i++) {
       final y = center.dy - 9 + h * (i + 1);
       canvas.drawOval(
-          Rect.fromCenter(center: Offset(center.dx, y), width: diskW, height: 4),
-          _bodyPaint);
+        Rect.fromCenter(center: Offset(center.dx, y), width: diskW, height: 4),
+        _bodyPaint,
+      );
       canvas.drawOval(
-          Rect.fromCenter(center: Offset(center.dx, y), width: diskW, height: 4),
-          _strokePaint);
+        Rect.fromCenter(center: Offset(center.dx, y), width: diskW, height: 4),
+        _strokePaint,
+      );
     }
     // Tepe topu
     final topR = lvl == 3 ? 3.5 : 2.5;
@@ -496,8 +536,14 @@ class TowerComponent extends PositionComponent with TapCallbacks {
       // Yan mini-coil'ler
       for (final dx in [-7.0, 7.0]) {
         canvas.drawRect(
-            Rect.fromLTWH(center.dx + dx - 1, center.dy - 5, 2, 12), _darkPaint);
-        canvas.drawCircle(Offset(center.dx + dx, center.dy - 6), 1.6, _accentPaint);
+          Rect.fromLTWH(center.dx + dx - 1, center.dy - 5, 2, 12),
+          _darkPaint,
+        );
+        canvas.drawCircle(
+          Offset(center.dx + dx, center.dy - 6),
+          1.6,
+          _accentPaint,
+        );
       }
     }
   }

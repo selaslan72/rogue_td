@@ -64,6 +64,18 @@ Branch'ler `origin`'e push edildi, PR açma kararı kullanıcıya bırakıldı.
 
 ### Sıradaki işler (öneri sırası)
 
+### 2026-04-29 — Codex review follow-up
+
+- `TargetingMode.first` düzeltildi: artık düşmanları ekran `y`
+  koordinatına göre değil, waypoint segmentlerindeki gerçek yol
+  ilerlemesine göre seçiyor.
+- `EnemyComponent.pathProgress` eklendi. Snake, Zigzag ve U-Loop gibi yön
+  değiştiren yollarda "first" hedefi artık çıkışa daha yakın düşman.
+- Kullanıcı kararı notu: 5 tower'ın baştan açık olması bu aşama için makul.
+  Wave sonu kart seçimi şimdilik duplicate reward/ekonomi seçimine dönüşüyor;
+  ileride kartlar upgrade perk, geçici buff veya run modifier seçimine
+  evrilebilir.
+
 - [ ] **Projectile sistemi** — şu an instant hit. Archer ok atarken
       görünür mermi, cannon top, tesla zincir bolt animasyonu eklenebilir.
 - [ ] **Tower satış / yer değiştirme** — slot'a yanlış tower koyunca
@@ -76,8 +88,8 @@ Branch'ler `origin`'e push edildi, PR açma kararı kullanıcıya bırakıldı.
 - [ ] **Ses** — flame_audio paketi pubspec'te yok, eklenip atış/ölüm/
       wave-clear için kısa SFX bağlanabilir.
 - [ ] **Bilinen bug'lar** (eski review notları, hâlâ geçerli):
-  - `TargetingMode.first` `y` koordinatı kullanıyor; gerçek waypoint
-    ilerlemesine geçmeli.
+  - ~~`TargetingMode.first` `y` koordinatı kullanıyor; gerçek waypoint
+    ilerlemesine geçmeli.~~ 2026-04-29 Codex tarafından düzeltildi.
   - (Frost King artık yok — 5-tower geçişiyle kalktı, bu maddeyi atla.)
 - [ ] **Meta progression** (Sprint 3 planı) — sqflite ile rune sistemi,
       run'lar arası kalıcı ilerleme.
@@ -88,3 +100,30 @@ Branch'ler `origin`'e push edildi, PR açma kararı kullanıcıya bırakıldı.
   push'a gerek yok" deyip sonra fikrini değiştirip "şimdi pushla" dedi
   → tüm branch'ler push edildi. Default davranış: commit ediyoruz, push
   için onay bekliyoruz (kullanıcı isteği).
+
+### 2026-04-29 — Store araştırması / feature backlog
+
+Kaynaklar:
+- Bloons TD 6, Google Play: towers + heroes, boss events, odysseys,
+  contested territory, quests, trophy/cosmetic store, community challenges.
+- Kingdom Rush, Google Play/App Store: kahramanlar, tower specialization,
+  farklı enemy ability'leri, spell/reinforcement komutları, achievement ve
+  offline encyclopedia.
+- Isle of Arrows, App Store: roguelike TD + tile placement, random rewards,
+  events, game modes, modifiers, daily mode, bonus cards.
+- Random Dice, App Store/Google Play: 5'li deck, merge/level-up, solo/PvP/co-op
+  boss raid, season ranking.
+- Arknights, Google Play/App Store: sınıf bazlı operatörler, auto-deploy,
+  base construction, güçlü ses/karakter sunumu.
+
+Projeye uygun öneriler:
+- **Kısa vadeli:** wave preview, enemy encyclopedia, targeting mode UI,
+  projectile görselleri, sell/undo, run sonunda ayrıntılı istatistik.
+- **Roguelike kart hissi:** wave sonu kartlarını sadece duplicate gold yerine
+  geçici buff, tower perk veya run modifier seçimine dönüştür.
+- **Meta progression:** run sonunda rune/fragment kazan; kalıcı ama küçük
+  bonuslar aç. Pay-to-win değil, "build çeşitliliği" hissi versin.
+- **Content loop:** daily seed, challenge mode, boss wave modifier'ları,
+  achievement görevleri.
+- **Mobil kalite:** offline-first, hızlı yeniden başlatma, düşük batarya modu,
+  net dokunmatik hedefler, landscape/portrait seçeneği.
