@@ -34,12 +34,13 @@ class _GameScreenState extends State<GameScreen> {
             _TopHud(game: _game),
             Expanded(
               child: Stack(
+                fit: StackFit.expand,
                 children: [
                   GameWidget(game: _game),
-                  _UpgradeOverlay(game: _game),
-                  _CardSelectOverlay(game: _game),
-                  _ModifierSelectOverlay(game: _game),
-                  _RunResultOverlay(game: _game),
+                  Positioned.fill(child: _UpgradeOverlay(game: _game)),
+                  Positioned.fill(child: _CardSelectOverlay(game: _game)),
+                  Positioned.fill(child: _ModifierSelectOverlay(game: _game)),
+                  Positioned.fill(child: _RunResultOverlay(game: _game)),
                 ],
               ),
             ),
