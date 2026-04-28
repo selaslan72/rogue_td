@@ -37,7 +37,6 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     ..strokeWidth = 1.5;
   static final _darkPaint = Paint()..color = const Color(0xFF1F2937);
   static final _whitePaint = Paint()..color = Colors.white;
-  static final _goldPaint = Paint()..color = const Color(0xFFFBBF24);
   static final _levelOnPaint = Paint()..color = const Color(0xFFFBBF24);
   static final _levelOffPaint = Paint()..color = Colors.white24;
 
@@ -263,43 +262,21 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   }
 
   // ─── Model çizimleri ────────────────────────────────────────────────────
-  // Her model card.color'ı vurgu olarak kullanır, ortak base disk üstüne
-  // oturur. Yön gerektiren modeller `_aimAngle()` ile hedefe döner.
+  // 5 archetype × 3 level = 15 görsel varyant. Her tower upgrade'de
+  // şekli görünür biçimde değişir (daha büyük/karmaşık silüet).
 
   void _renderModel(Canvas canvas, Offset center) {
     switch (card.id) {
       case 'archer':
-        _renderBow(canvas, center);
-      case 'slingshot':
-        _renderSlingshot(canvas, center);
-      case 'spike':
-        _renderSword(canvas, center, gold: false);
-      case 'holy-blade':
-        _renderSword(canvas, center, gold: true);
-      case 'sniper':
-        _renderSniper(canvas, center);
+        _renderBow(canvas, center, level);
       case 'cannon':
-        _renderBarrel(canvas, center, length: 12, width: 8);
-      case 'mortar':
-        _renderMortar(canvas, center);
-      case 'bombardier':
-        _renderRocketPod(canvas, center);
-      case 'dragon':
-        _renderDragon(canvas, center);
+        _renderCannon(canvas, center, level);
       case 'frost':
-        _renderSnowflake(canvas, center, spokes: 6, radius: 11);
-      case 'blizzard':
-        _renderSnowflake(canvas, center, spokes: 8, radius: 13);
-      case 'frost-king':
-        _renderFrostKing(canvas, center);
+        _renderFrost(canvas, center, level);
       case 'flame':
-        _renderFlamethrower(canvas, center);
-      case 'poison':
-        _renderPoisonVat(canvas, center);
+        _renderFlame(canvas, center, level);
       case 'tesla':
-        _renderTeslaCoil(canvas, center, disks: 2);
-      case 'lightning':
-        _renderTeslaCoil(canvas, center, disks: 3, withSpark: true);
+        _renderTesla(canvas, center, level);
       default:
         canvas.drawCircle(center, 8, _bodyPaint);
         canvas.drawCircle(center, 8, _strokePaint);
@@ -314,156 +291,99 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     canvas.restore();
   }
 
-  // Yay: iki yan kavis + ok (yatay, ucu sağa).
-  void _renderBow(Canvas canvas, Offset center) {
+  // ── Archer ─────────────────────────────────────────────────────────────
+  // L1: küçük yay + tek ok
+  // L2: büyük yay + tek ok + sadak (yan disk)
+  // L3: çift kollu çapraz yay (crossbow) + iki ok
+  void _renderBow(Canvas canvas, Offset center, int lvl) {
     _withRotation(canvas, center, _aimAngle(), () {
       final bowPaint = Paint()
         ..color = card.color
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5
+        ..strokeWidth = lvl == 1 ? 2.0 : 2.8
         ..strokeCap = StrokeCap.round;
-      // Yay (sol tarafta)
-      final rect = Rect.fromCircle(center: const Offset(-4, 0), radius: 9);
+      final radius = lvl == 1 ? 8.0 : (lvl == 2 ? 11.0 : 12.0);
+      final rect = Rect.fromCircle(center: const Offset(-4, 0), radius: radius);
       canvas.drawArc(rect, -math.pi / 2.2, math.pi / 1.1, false, bowPaint);
       // Kiriş
-      canvas.drawLine(const Offset(-4, -8), const Offset(-4, 8),
+      canvas.drawLine(
+          Offset(-4, -radius * 0.85), Offset(-4, radius * 0.85),
           Paint()..color = Colors.white70..strokeWidth = 1);
-      // Ok (sağa doğru)
-      canvas.drawLine(const Offset(-4, 0), const Offset(10, 0),
-          Paint()..color = Colors.white..strokeWidth = 1.5);
-      // Ok ucu
-      final tip = Path()
-        ..moveTo(13, 0)
-        ..lineTo(9, -3)
-        ..lineTo(9, 3)
-        ..close();
-      canvas.drawPath(tip, _whitePaint);
-    });
-  }
-
-  // Sapan: Y formu, üst iki kol açılı.
-  void _renderSlingshot(Canvas canvas, Offset center) {
-    _withRotation(canvas, center, _aimAngle() + math.pi / 2, () {
-      final p = Paint()
-        ..color = card.color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5
-        ..strokeCap = StrokeCap.round;
-      canvas.drawLine(const Offset(0, 6), const Offset(0, -2), p);
-      canvas.drawLine(const Offset(0, -2), const Offset(-7, -9), p);
-      canvas.drawLine(const Offset(0, -2), const Offset(7, -9), p);
-      // Lastik bandı
-      canvas.drawLine(const Offset(-7, -9), const Offset(7, -9),
-          Paint()..color = Colors.white70..strokeWidth = 1);
-      // Mermi
-      canvas.drawCircle(const Offset(0, -9), 2, _whitePaint);
-    });
-  }
-
-  // Kılıç: dikey blade + crossguard + kabza.
-  void _renderSword(Canvas canvas, Offset center, {required bool gold}) {
-    _withRotation(canvas, center, _aimAngle() + math.pi / 2, () {
-      final blade = gold ? _goldPaint : Paint()..color = const Color(0xFFE5E7EB);
-      final guardColor = gold ? const Color(0xFFB45309) : card.color;
-      // Blade
-      canvas.drawRect(const Rect.fromLTWH(-1.5, -12, 3, 16), blade);
-      canvas.drawRect(const Rect.fromLTWH(-1.5, -12, 3, 16),
-          Paint()..color = Colors.black54..style = PaintingStyle.stroke..strokeWidth = 1);
-      // Crossguard
-      canvas.drawRect(const Rect.fromLTWH(-6, 3, 12, 2), Paint()..color = guardColor);
-      // Hilt
-      canvas.drawRect(const Rect.fromLTWH(-1.5, 5, 3, 5), Paint()..color = guardColor);
-      // Pommel
-      canvas.drawCircle(const Offset(0, 11), 2, Paint()..color = guardColor);
-    });
-  }
-
-  // Sniper: uzun ince namlu + scope.
-  void _renderSniper(Canvas canvas, Offset center) {
-    _withRotation(canvas, center, _aimAngle(), () {
-      // Namlu
-      canvas.drawRect(const Rect.fromLTWH(-2, -2, 16, 4), _bodyPaint);
-      canvas.drawRect(const Rect.fromLTWH(-2, -2, 16, 4), _strokePaint);
-      // Dipçik
-      canvas.drawRect(const Rect.fromLTWH(-8, -3, 6, 6), _darkPaint);
-      // Scope
-      canvas.drawCircle(const Offset(2, -5), 2.5, _darkPaint);
-      canvas.drawCircle(const Offset(2, -5), 1.2, _whitePaint);
-    });
-  }
-
-  // Genel namlu (cannon).
-  void _renderBarrel(Canvas canvas, Offset center, {required double length, required double width}) {
-    _withRotation(canvas, center, _aimAngle(), () {
-      // Gövde diski
-      canvas.drawCircle(Offset.zero, 7, _bodyPaint);
-      canvas.drawCircle(Offset.zero, 7, _strokePaint);
-      // Namlu
-      canvas.drawRect(Rect.fromLTWH(2, -width / 2, length, width), _darkPaint);
-      // Namlu ucu halkası
-      canvas.drawCircle(Offset(2 + length, 0), width / 2 + 0.5, _strokePaint);
-    });
-  }
-
-  // Mortar: tıknaz, dik açılı. Üstten bakış: kalın daire + içinde delik.
-  void _renderMortar(Canvas canvas, Offset center) {
-    canvas.drawCircle(center, 10, _bodyPaint);
-    canvas.drawCircle(center, 10, _strokePaint);
-    canvas.drawCircle(center, 6, _darkPaint);
-    canvas.drawCircle(center, 3, _accentPaint);
-    // 4 cıvata
-    final boltPaint = Paint()..color = const Color(0xFF111827);
-    for (int i = 0; i < 4; i++) {
-      final a = i * math.pi / 2 + math.pi / 4;
-      canvas.drawCircle(
-        center + Offset(math.cos(a), math.sin(a)) * 8.5,
-        1.2,
-        boltPaint,
-      );
-    }
-  }
-
-  // Roket bataryası: iki silindir paralel.
-  void _renderRocketPod(Canvas canvas, Offset center) {
-    _withRotation(canvas, center, _aimAngle(), () {
-      for (final dy in [-4.0, 4.0]) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(Rect.fromLTWH(-4, dy - 2, 14, 4), const Radius.circular(2)),
-          _bodyPaint,
-        );
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(Rect.fromLTWH(-4, dy - 2, 14, 4), const Radius.circular(2)),
-          _strokePaint,
-        );
-        // Roket ucu
-        canvas.drawCircle(Offset(10, dy), 1.5, _whitePaint);
+      // Ok (lar)
+      final arrowLen = lvl == 3 ? 14.0 : 11.0;
+      void drawArrow(double dy) {
+        canvas.drawLine(Offset(-4, dy), Offset(arrowLen - 4, dy),
+            Paint()..color = Colors.white..strokeWidth = 1.4);
+        final tip = Path()
+          ..moveTo(arrowLen - 1, dy)
+          ..lineTo(arrowLen - 5, dy - 3)
+          ..lineTo(arrowLen - 5, dy + 3)
+          ..close();
+        canvas.drawPath(tip, _whitePaint);
+      }
+      if (lvl == 3) {
+        drawArrow(-3);
+        drawArrow(3);
+        // Crossbow: ikinci ark
+        canvas.drawArc(
+            Rect.fromCircle(center: const Offset(-7, 0), radius: 8),
+            -math.pi / 2.2, math.pi / 1.1, false, bowPaint);
+      } else {
+        drawArrow(0);
+      }
+      if (lvl >= 2) {
+        // Sadak — sağ yanda küçük disk
+        canvas.drawCircle(const Offset(-9, -7), 2, _accentPaint);
+        canvas.drawCircle(const Offset(-9, -7), 2, _strokePaint);
       }
     });
   }
 
-  // Ejderha: üçgen kafa + iki boynuz, yön gösterir.
-  void _renderDragon(Canvas canvas, Offset center) {
+  // ── Cannon ─────────────────────────────────────────────────────────────
+  // L1: kısa namlu
+  // L2: uzun + kalın namlu, gövde büyük
+  // L3: çift namlu yan yana
+  void _renderCannon(Canvas canvas, Offset center, int lvl) {
     _withRotation(canvas, center, _aimAngle(), () {
-      final head = Path()
-        ..moveTo(12, 0)
-        ..lineTo(-6, -8)
-        ..lineTo(-6, 8)
-        ..close();
-      canvas.drawPath(head, _bodyPaint);
-      canvas.drawPath(head, _strokePaint);
-      // Boynuzlar
-      final hornPaint = _darkPaint;
-      canvas.drawLine(const Offset(-3, -6), const Offset(-9, -11), hornPaint..strokeWidth = 2);
-      canvas.drawLine(const Offset(-3, 6), const Offset(-9, 11), hornPaint..strokeWidth = 2);
-      // Göz
-      canvas.drawCircle(const Offset(4, -2), 1.4, _goldPaint);
-      // Burun deliği / alev hint
-      canvas.drawCircle(const Offset(11, 0), 1.5, _accentPaint);
+      final bodyR = lvl == 1 ? 6.5 : (lvl == 2 ? 8.0 : 9.0);
+      // Gövde
+      canvas.drawCircle(Offset.zero, bodyR, _bodyPaint);
+      canvas.drawCircle(Offset.zero, bodyR, _strokePaint);
+      // Cıvata noktaları (L2+)
+      if (lvl >= 2) {
+        final boltPaint = Paint()..color = const Color(0xFF111827);
+        for (int i = 0; i < 4; i++) {
+          final a = i * math.pi / 2 + math.pi / 4;
+          canvas.drawCircle(
+            Offset(math.cos(a) * (bodyR - 1.5), math.sin(a) * (bodyR - 1.5)),
+            1.0, boltPaint,
+          );
+        }
+      }
+      void drawBarrel(double dy) {
+        final length = lvl == 1 ? 9.0 : (lvl == 2 ? 13.0 : 12.0);
+        final width = lvl == 1 ? 6.0 : (lvl == 2 ? 8.0 : 6.0);
+        canvas.drawRect(
+            Rect.fromLTWH(2, dy - width / 2, length, width), _darkPaint);
+        canvas.drawCircle(
+            Offset(2 + length, dy), width / 2 + 0.5, _strokePaint);
+      }
+      if (lvl == 3) {
+        drawBarrel(-3.5);
+        drawBarrel(3.5);
+      } else {
+        drawBarrel(0);
+      }
     });
   }
 
-  // Kar tanesi.
-  void _renderSnowflake(Canvas canvas, Offset center, {required int spokes, required double radius}) {
+  // ── Frost ──────────────────────────────────────────────────────────────
+  // L1: 6-spoke flake
+  // L2: 8-spoke + merkez taş
+  // L3: 8-spoke + ek mini-spoke + dış kristal halkası
+  void _renderFrost(Canvas canvas, Offset center, int lvl) {
+    final spokes = lvl == 1 ? 6 : 8;
+    final radius = lvl == 1 ? 10.0 : (lvl == 2 ? 12.0 : 14.0);
     final p = Paint()
       ..color = card.color
       ..style = PaintingStyle.stroke
@@ -473,92 +393,93 @@ class TowerComponent extends PositionComponent with TapCallbacks {
       final a = i * 2 * math.pi / spokes;
       final tip = center + Offset(math.cos(a), math.sin(a)) * radius;
       canvas.drawLine(center, tip, p);
-      // Yan çatallar
       final t1 = tip - Offset(math.cos(a) * 4, math.sin(a) * 4);
       final n = Offset(-math.sin(a), math.cos(a)) * 3;
       canvas.drawLine(t1, t1 + n, p);
       canvas.drawLine(t1, t1 - n, p);
     }
-    canvas.drawCircle(center, 2.5, _whitePaint);
+    if (lvl == 3) {
+      // Dış kristal üçgenler
+      final crystalPaint = Paint()..color = _accentPaint.color;
+      for (int i = 0; i < 4; i++) {
+        final a = i * math.pi / 2 + math.pi / 4;
+        final c = center + Offset(math.cos(a), math.sin(a)) * (radius + 2);
+        final tri = Path()
+          ..moveTo(c.dx, c.dy - 2.5)
+          ..lineTo(c.dx + 2, c.dy + 1.5)
+          ..lineTo(c.dx - 2, c.dy + 1.5)
+          ..close();
+        canvas.drawPath(tri, crystalPaint);
+      }
+    }
+    // Merkez
+    if (lvl >= 2) {
+      canvas.drawCircle(center, 3, _accentPaint);
+      canvas.drawCircle(center, 3, _strokePaint);
+    } else {
+      canvas.drawCircle(center, 2.5, _whitePaint);
+    }
   }
 
-  // Frost King: snowflake + altın taç şıkırtısı.
-  void _renderFrostKing(Canvas canvas, Offset center) {
-    _renderSnowflake(canvas, center, spokes: 6, radius: 12);
-    // Taç sivri uçları (üst kısım)
-    final crown = Path()
-      ..moveTo(center.dx - 9, center.dy - 12)
-      ..lineTo(center.dx - 6, center.dy - 16)
-      ..lineTo(center.dx - 3, center.dy - 13)
-      ..lineTo(center.dx, center.dy - 17)
-      ..lineTo(center.dx + 3, center.dy - 13)
-      ..lineTo(center.dx + 6, center.dy - 16)
-      ..lineTo(center.dx + 9, center.dy - 12)
-      ..close();
-    canvas.drawPath(crown, _goldPaint);
-    canvas.drawPath(crown,
-        Paint()..color = Colors.black87..style = PaintingStyle.stroke..strokeWidth = 1);
-  }
-
-  // Alev makinesi: koni nozul.
-  void _renderFlamethrower(Canvas canvas, Offset center) {
+  // ── Flame ──────────────────────────────────────────────────────────────
+  // L1: küçük tank + dar koni
+  // L2: büyük tank + geniş koni
+  // L3: çift nozul + çok geniş koni
+  void _renderFlame(Canvas canvas, Offset center, int lvl) {
     _withRotation(canvas, center, _aimAngle(), () {
+      final tankR = lvl == 1 ? 5.0 : (lvl == 2 ? 7.0 : 7.5);
       // Tank
-      canvas.drawCircle(const Offset(-3, 0), 6, _bodyPaint);
-      canvas.drawCircle(const Offset(-3, 0), 6, _strokePaint);
-      // Nozul (gövde)
-      canvas.drawRect(const Rect.fromLTWH(2, -2, 6, 4), _darkPaint);
-      // Koni ağız
-      final cone = Path()
-        ..moveTo(8, -3)
-        ..lineTo(14, -6)
-        ..lineTo(14, 6)
-        ..lineTo(8, 3)
-        ..close();
-      canvas.drawPath(cone, _accentPaint);
-      canvas.drawPath(cone, _strokePaint);
+      canvas.drawCircle(Offset(-3, 0), tankR, _bodyPaint);
+      canvas.drawCircle(Offset(-3, 0), tankR, _strokePaint);
+      void drawNozzle(double dy) {
+        canvas.drawRect(Rect.fromLTWH(2, dy - 2, 6, 4), _darkPaint);
+        // Koni
+        final coneW = lvl == 1 ? 4.0 : (lvl == 2 ? 7.0 : 8.0);
+        final coneH = lvl == 1 ? 5.0 : (lvl == 2 ? 7.0 : 8.0);
+        final cone = Path()
+          ..moveTo(8, dy - coneH / 2 + 1)
+          ..lineTo(8 + coneW, dy - coneH / 2)
+          ..lineTo(8 + coneW, dy + coneH / 2)
+          ..lineTo(8, dy + coneH / 2 - 1)
+          ..close();
+        canvas.drawPath(cone, _accentPaint);
+        canvas.drawPath(cone, _strokePaint);
+      }
+      if (lvl == 3) {
+        drawNozzle(-4);
+        drawNozzle(4);
+      } else {
+        drawNozzle(0);
+      }
     });
   }
 
-  // Zehir tankı: damla/şişe + baloncuk.
-  void _renderPoisonVat(Canvas canvas, Offset center) {
-    final flask = Path()
-      ..moveTo(center.dx - 5, center.dy - 5)
-      ..lineTo(center.dx + 5, center.dy - 5)
-      ..lineTo(center.dx + 8, center.dy + 8)
-      ..lineTo(center.dx - 8, center.dy + 8)
-      ..close();
-    canvas.drawPath(flask, _bodyPaint);
-    canvas.drawPath(flask, _strokePaint);
-    // Boyun
-    canvas.drawRect(
-        Rect.fromLTWH(center.dx - 3, center.dy - 10, 6, 5), _darkPaint);
-    // Baloncuk
-    canvas.drawCircle(center + const Offset(-2, 3), 1.5, _whitePaint);
-    canvas.drawCircle(center + const Offset(2, 5), 1, _whitePaint);
-    canvas.drawCircle(center + const Offset(0, 0), 1.2, _accentPaint);
-  }
-
-  // Tesla coil: dikey bar + N adet disk + isteğe bağlı şimşek.
-  void _renderTeslaCoil(Canvas canvas, Offset center,
-      {required int disks, bool withSpark = false}) {
+  // ── Tesla ──────────────────────────────────────────────────────────────
+  // L1: 2 disk
+  // L2: 3 disk + spark
+  // L3: 3 disk + spark + iki yan mini-coil
+  void _renderTesla(Canvas canvas, Offset center, int lvl) {
+    final disks = lvl == 1 ? 2 : 3;
+    final showSpark = lvl >= 2;
     // Bar
     canvas.drawRect(
         Rect.fromLTWH(center.dx - 1.5, center.dy - 10, 3, 20), _darkPaint);
-    // Disk'ler
     final h = 18.0 / (disks + 1);
+    final diskW = lvl == 3 ? 16.0 : 14.0;
     for (int i = 0; i < disks; i++) {
       final y = center.dy - 9 + h * (i + 1);
       canvas.drawOval(
-          Rect.fromCenter(center: Offset(center.dx, y), width: 14, height: 4),
+          Rect.fromCenter(center: Offset(center.dx, y), width: diskW, height: 4),
           _bodyPaint);
       canvas.drawOval(
-          Rect.fromCenter(center: Offset(center.dx, y), width: 14, height: 4),
+          Rect.fromCenter(center: Offset(center.dx, y), width: diskW, height: 4),
           _strokePaint);
     }
     // Tepe topu
-    canvas.drawCircle(Offset(center.dx, center.dy - 11), 2.5, _accentPaint);
-    if (withSpark) {
+    final topR = lvl == 3 ? 3.5 : 2.5;
+    canvas.drawCircle(Offset(center.dx, center.dy - 11), topR, _accentPaint);
+    canvas.drawCircle(Offset(center.dx, center.dy - 11), topR, _strokePaint);
+    if (showSpark) {
       final sparkPaint = Paint()
         ..color = _accentPaint.color
         ..style = PaintingStyle.stroke
@@ -570,6 +491,14 @@ class TowerComponent extends PositionComponent with TapCallbacks {
         ..lineTo(center.dx + 5, center.dy - 7)
         ..lineTo(center.dx + 9, center.dy - 4);
       canvas.drawPath(spark, sparkPaint);
+    }
+    if (lvl == 3) {
+      // Yan mini-coil'ler
+      for (final dx in [-7.0, 7.0]) {
+        canvas.drawRect(
+            Rect.fromLTWH(center.dx + dx - 1, center.dy - 5, 2, 12), _darkPaint);
+        canvas.drawCircle(Offset(center.dx + dx, center.dy - 6), 1.6, _accentPaint);
+      }
     }
   }
 }

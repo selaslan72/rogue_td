@@ -13,6 +13,7 @@ import 'card_pool.dart';
 import 'components/castle_component.dart';
 import 'components/enemy_component.dart';
 import 'components/path_component.dart';
+import 'components/rock_component.dart';
 import 'components/tower_component.dart';
 import 'components/tower_slot.dart';
 import 'components/tree_component.dart';
@@ -110,6 +111,15 @@ class TdGame extends FlameGame with HasGameReference {
       ));
     }
 
+    int rockSeed = 0;
+    for (final (x, y, rockScale) in map.rockPositions) {
+      add(RockComponent(
+        worldPosition: Vector2(x, y),
+        sizeScale: rockScale,
+        seed: rockSeed++,
+      ));
+    }
+
     for (final slotPos in map.towerSlots) {
       add(TowerSlot(
         worldPosition: slotPos,
@@ -125,6 +135,7 @@ class TdGame extends FlameGame with HasGameReference {
             c is PathComponent ||
             c is CastleComponent ||
             c is TreeComponent ||
+            c is RockComponent ||
             c is TowerSlot ||
             c is TowerComponent ||
             c is EnemyComponent)
