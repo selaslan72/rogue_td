@@ -1,6 +1,7 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../game/components/tower_slot.dart';
 import '../game/components/tower_component.dart';
 import '../game/td_game.dart';
 import '../models/enemy_def.dart';
@@ -38,6 +39,7 @@ class _GameScreenState extends State<GameScreen> {
                 fit: StackFit.expand,
                 children: [
                   GameWidget(game: _game),
+                  Positioned.fill(child: _SlotTowerPickerOverlay(game: _game)),
                   Positioned.fill(child: _UpgradeOverlay(game: _game)),
                   Positioned.fill(child: _CardSelectOverlay(game: _game)),
                   Positioned.fill(child: _ModifierSelectOverlay(game: _game)),
@@ -66,10 +68,60 @@ class _BottomBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           _SpeedButton(game: game),
-          const SizedBox(width: 4),
-          Expanded(child: _TowerSelector(game: game)),
+          const Spacer(),
         ],
       ),
+    );
+  }
+}
+
+class _SlotTowerPickerOverlay extends StatelessWidget {
+  final TdGame game;
+  const _SlotTowerPickerOverlay({required this.game});
+
+  static const double _worldW = 480;
+  static const double _worldH = 800;
+  static const double _pickerW = 412;
+  static const double _pickerH = 96;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<TowerSlot?>(
+      valueListenable: game.pendingTowerSlotNotifier,
+      builder: (_, slot, _) {
+        if (slot == null) return const SizedBox.shrink();
+        return LayoutBuilder(
+          builder: (_, constraints) {
+            final pickerW = constraints.maxWidth < _pickerW + 16
+                ? constraints.maxWidth - 16
+                : _pickerW;
+            final scaleX = constraints.maxWidth / _worldW;
+            final scaleY = constraints.maxHeight / _worldH;
+            final slotX = slot.position.x * scaleX;
+            final slotY = slot.position.y * scaleY;
+            final left = (slotX - pickerW / 2).clamp(
+              8.0,
+              constraints.maxWidth - pickerW - 8.0,
+            );
+            final top = (slotY - _pickerH - 18).clamp(
+              8.0,
+              constraints.maxHeight - _pickerH - 8.0,
+            );
+
+            return Stack(
+              children: [
+                Positioned(
+                  left: left,
+                  top: top,
+                  width: pickerW,
+                  height: _pickerH,
+                  child: _TowerSelector(game: game),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -668,7 +720,7 @@ class _TowerSelector extends StatelessWidget {
               final card = unlocked[i];
               final isSelected = card.id == selected.id;
               return GestureDetector(
-                onTap: () => game.selectTower(card),
+                onTap: () => game.placeTowerFromPicker(card),
                 child: Container(
                   width: 76,
                   padding: const EdgeInsets.symmetric(vertical: 7),
@@ -970,9 +1022,7 @@ class _SpeedButton extends StatelessWidget {
           height: 96,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isFast
-                ? const Color(0x99FBAA24)
-                : const Color(0x661A1A2E),
+            color: isFast ? const Color(0x99FBAA24) : const Color(0x661A1A2E),
             border: Border.all(
               color: isFast ? const Color(0xFFFBBF24) : Colors.white30,
               width: isFast ? 2 : 1,

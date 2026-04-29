@@ -59,6 +59,9 @@ class TdGame extends FlameGame with HasGameReference {
 
   final ValueNotifier<TowerComponent?> selectedExistingTowerNotifier =
       ValueNotifier(null);
+  final ValueNotifier<TowerSlot?> pendingTowerSlotNotifier = ValueNotifier(
+    null,
+  );
 
   // Wave sonu kart seçimi
   final ValueNotifier<List<TowerCard>?> cardSelectNotifier = ValueNotifier(
@@ -173,6 +176,7 @@ class TdGame extends FlameGame with HasGameReference {
 
   void _toggleObstacleSelection(Damageable target) {
     if (runEnded) return;
+    _clearPendingTowerSlot();
     if (identical(_selectedObstacle, target)) {
       _setObstacleSelected(target, false);
       _selectedObstacle = null;
@@ -199,15 +203,19 @@ class TdGame extends FlameGame with HasGameReference {
     cluster.remaining.remove(obstacle);
     if (cluster.remaining.isEmpty) {
       _clusters.remove(clusterId);
-      add(ParticleEffect(
-        worldPosition: cluster.center.clone(),
-        color: obstacle is RockComponent
-            ? const Color(0xFFB7BFCB)
-            : const Color(0xFF4A8A3A),
-        duration: 0.4,
-        maxRadius: 18,
-      ));
-      add(TowerSlot(worldPosition: cluster.center.clone(), onTap: _handleSlotTap));
+      add(
+        ParticleEffect(
+          worldPosition: cluster.center.clone(),
+          color: obstacle is RockComponent
+              ? const Color(0xFFB7BFCB)
+              : const Color(0xFF4A8A3A),
+          duration: 0.4,
+          maxRadius: 18,
+        ),
+      );
+      add(
+        TowerSlot(worldPosition: cluster.center.clone(), onTap: _handleSlotTap),
+      );
     }
   }
 
@@ -216,6 +224,7 @@ class TdGame extends FlameGame with HasGameReference {
     _clusters.clear();
     _nextClusterId = 0;
     _selectedObstacle = null;
+    _clearPendingTowerSlot();
     final removable = children
         .where(
           (c) =>
@@ -238,18 +247,35 @@ class TdGame extends FlameGame with HasGameReference {
   void _handleSlotTap(TowerSlot slot) {
     if (runEnded) return;
     if (slot.isOccupied) return;
-    if (gold < selectedTower.baseCost) {
-      _flashMessage('Not enough gold (${selectedTower.baseCost})');
+    if (pendingTowerSlotNotifier.value == slot) {
+      _clearPendingTowerSlot();
       return;
     }
-    gold -= selectedTower.baseCost;
+    _clearSelectedExisting();
+    _clearPendingTowerSlot();
+    slot.isHighlighted = true;
+    pendingTowerSlotNotifier.value = slot;
+  }
+
+  void placeTowerFromPicker(TowerCard card) {
+    final slot = pendingTowerSlotNotifier.value;
+    if (slot == null || runEnded || slot.isOccupied) return;
+    if (gold < card.baseCost) {
+      _flashMessage('Not enough gold (${card.baseCost})');
+      return;
+    }
+    selectedTower = card;
+    selectedTowerNotifier.value = card;
+    gold -= card.baseCost;
     goldNotifier.value = gold;
 
     slot.isOccupied = true;
+    slot.isHighlighted = false;
+    pendingTowerSlotNotifier.value = null;
     _clearSelectedExisting();
     add(
       TowerComponent(
-        card: selectedTower,
+        card: card,
         worldPosition: slot.position,
         onTap: _handleTowerTap,
         stats: stats,
@@ -265,6 +291,7 @@ class TdGame extends FlameGame with HasGameReference {
   }
 
   void _handleTowerTap(TowerComponent tower) {
+    _clearPendingTowerSlot();
     final prev = selectedExistingTowerNotifier.value;
     if (prev != null) prev.showRange = false;
     if (prev == tower) {
@@ -279,6 +306,11 @@ class TdGame extends FlameGame with HasGameReference {
   void _clearSelectedExisting() {
     selectedExistingTowerNotifier.value?.showRange = false;
     selectedExistingTowerNotifier.value = null;
+  }
+
+  void _clearPendingTowerSlot() {
+    pendingTowerSlotNotifier.value?.isHighlighted = false;
+    pendingTowerSlotNotifier.value = null;
   }
 
   void tryUpgradeTower(TowerComponent tower) {
@@ -511,6 +543,7 @@ class TdGame extends FlameGame with HasGameReference {
     if (runEnded) return;
     runEnded = true;
     waveActive = false;
+    _clearPendingTowerSlot();
     final towers = children
         .whereType<TowerComponent>()
         .map((t) => t.card)

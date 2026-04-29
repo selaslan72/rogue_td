@@ -272,6 +272,19 @@ Branch `claude/damageable-obstacles` — 1 commit: `fd58844`
 - Düşman gelince tower ağacı bırakıp düşmanı hedeflemeli.
 - Rock: tek başına yıkılınca da slot açılmalı.
 
+### 2026-04-29 — Codex tower picker popup
+
+- Bottom bar artık tower listesini göstermiyor; sadece 1x/1.5x speed button
+  sol altta kalıyor.
+- Boş `TowerSlot` tıklanınca slot highlight olur ve slotun üstünde küçük
+  yatay tower picker popup'ı açılır.
+- Popup'taki 5 tower kartından biri seçilince tower o slot'a yerleşir.
+- Aynı slot'a tekrar tıklamak popup'ı kapatır.
+- Tower'a veya obstacle'a tıklamak açık tower picker'ı kapatır.
+- Popup konumu 480x800 world koordinatından Stack boyutuna map ediliyor ve
+  ekran dışına taşmaması için clamp ediliyor.
+- Doğrulama: `flutter analyze` temiz, `flutter build web` başarılı.
+
 ### Sıradaki öneriler
 - Ses (flame_audio — atış/ölüm/wave-clear SFX)
 - Frost/Flame/Tesla için görsel projectile efektleri
