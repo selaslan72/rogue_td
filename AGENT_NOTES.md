@@ -242,3 +242,12 @@ Kalan öneriler:
 - **Açık öneri:** ağaç temizleme şu an "tek tap → anında temizlik". Yanlış
   tap'ları engellemek için confirm step (long-press veya iki tap) eklenmesi
   düşünülebilir. Şu an deneyim için kullanıcı bilinçli tercih etti.
+
+### 2026-04-29 — Codex aligned forest grid
+
+- Forest generator jitter'ı kaldırıldı. Ağaçlar artık slot ölçüsüyle aynı
+  ritimde, hizalı grid üstünde yerleşiyor.
+- Grid step `TowerSlot.side` ile eş oranda tutuldu: 48px.
+- Ağaç scale'i sabitlendi (`1.0`), böylece temizlenebilir alan ve görsel
+  ölçü slotlarla daha tutarlı duruyor.
+- Path clearance 36px, slot clearance 48px olarak güncellendi.
