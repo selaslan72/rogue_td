@@ -73,6 +73,10 @@ class TdGame extends FlameGame with HasGameReference {
 
   late CardPool cardPool;
 
+  // Obstacle cluster state
+  final Map<int, _ObstacleCluster> _clusters = {};
+  int _nextClusterId = 0;
+
   // Hız çarpanı — 1.0 (normal) veya 1.5 (hızlı)
   double _gameSpeed = 1.0;
   final ValueNotifier<bool> speedUpNotifier = ValueNotifier(false);
@@ -103,32 +107,52 @@ class TdGame extends FlameGame with HasGameReference {
 
   // ─── Harita kurulumu ──────────────────────────────────────────────────────
 
+  static const _treeOffsets = [
+    (-10.0, -6.0),
+    (10.0, -6.0),
+    (-6.0, 8.0),
+    (8.0, 8.0),
+  ];
+
   void _buildMap(GameMap map) {
     currentMap = map;
+    _clusters.clear();
+    _nextClusterId = 0;
 
     add(PathComponent(waypoints: map.waypoints, pathWidth: PathData.pathWidth));
-
     add(CastleComponent(worldPosition: map.waypoints.first, isEntry: true));
     add(CastleComponent(worldPosition: map.waypoints.last, isEntry: false));
 
-    for (final (x, y, treeScale) in map.treePositions) {
-      add(TreeComponent(
-        worldPosition: Vector2(x, y),
-        sizeScale: treeScale,
-        onTap: _handleTreeTap,
-      ));
+    for (final (cx, cy, _) in map.treePositions) {
+      final id = _nextClusterId++;
+      final center = Vector2(cx, cy);
+      final remaining = <PositionComponent>{};
+      for (final (dx, dy) in _treeOffsets) {
+        final tree = TreeComponent(
+          worldPosition: Vector2(cx + dx, cy + dy),
+          sizeScale: 1.0,
+          clusterId: id,
+          onDestroyed: (t) => _onObstacleDestroyed(t, t.clusterId),
+        );
+        remaining.add(tree);
+        add(tree);
+      }
+      _clusters[id] = _ObstacleCluster(center: center, remaining: remaining);
     }
 
     int rockSeed = 0;
-    for (final (x, y, rockScale) in map.rockPositions) {
-      add(
-        RockComponent(
-          worldPosition: Vector2(x, y),
-          sizeScale: rockScale,
-          seed: rockSeed++,
-          onTap: _handleRockTap,
-        ),
+    for (final (rx, ry, _) in map.rockPositions) {
+      final id = _nextClusterId++;
+      final center = Vector2(rx, ry);
+      final rock = RockComponent(
+        worldPosition: center.clone(),
+        sizeScale: 1.0,
+        seed: rockSeed++,
+        clusterId: id,
+        onDestroyed: (r) => _onObstacleDestroyed(r, r.clusterId),
       );
+      _clusters[id] = _ObstacleCluster(center: center, remaining: {rock});
+      add(rock);
     }
 
     for (final slotPos in map.towerSlots) {
@@ -136,8 +160,28 @@ class TdGame extends FlameGame with HasGameReference {
     }
   }
 
+  void _onObstacleDestroyed(PositionComponent obstacle, int clusterId) {
+    final cluster = _clusters[clusterId];
+    if (cluster == null) return;
+    cluster.remaining.remove(obstacle);
+    if (cluster.remaining.isEmpty) {
+      _clusters.remove(clusterId);
+      add(ParticleEffect(
+        worldPosition: cluster.center.clone(),
+        color: obstacle is RockComponent
+            ? const Color(0xFFB7BFCB)
+            : const Color(0xFF4A8A3A),
+        duration: 0.4,
+        maxRadius: 18,
+      ));
+      add(TowerSlot(worldPosition: cluster.center.clone(), onTap: _handleSlotTap));
+    }
+  }
+
   /// Tüm gameplay component'larını siler — yeni map için temizlik.
   void _clearMap() {
+    _clusters.clear();
+    _nextClusterId = 0;
     final removable = children
         .where(
           (c) =>
@@ -178,48 +222,6 @@ class TdGame extends FlameGame with HasGameReference {
         slot: slot,
       ),
     );
-  }
-
-  static const int treeClearCost = 15;
-  static const int rockClearCost = 35;
-
-  void _handleTreeTap(TreeComponent tree) {
-    if (runEnded) return;
-    if (gold < treeClearCost) {
-      _flashMessage('Not enough gold ($treeClearCost)');
-      return;
-    }
-    gold -= treeClearCost;
-    goldNotifier.value = gold;
-    // Tree anchor bottomCenter — slot center'a yükseltelim
-    final slotPos = Vector2(tree.position.x, tree.position.y - tree.size.y / 2);
-    add(ParticleEffect(
-      worldPosition: slotPos,
-      color: const Color(0xFF4A8A3A),
-      duration: 0.35,
-      maxRadius: 14,
-    ));
-    tree.removeFromParent();
-    add(TowerSlot(worldPosition: slotPos, onTap: _handleSlotTap));
-  }
-
-  void _handleRockTap(RockComponent rock) {
-    if (runEnded) return;
-    if (gold < rockClearCost) {
-      _flashMessage('Not enough gold ($rockClearCost)');
-      return;
-    }
-    gold -= rockClearCost;
-    goldNotifier.value = gold;
-    final slotPos = rock.position.clone();
-    add(ParticleEffect(
-      worldPosition: slotPos,
-      color: const Color(0xFFB7BFCB),
-      duration: 0.35,
-      maxRadius: 16,
-    ));
-    rock.removeFromParent();
-    add(TowerSlot(worldPosition: slotPos, onTap: _handleSlotTap));
   }
 
   void selectTower(TowerCard card) {
@@ -491,7 +493,7 @@ class TdGame extends FlameGame with HasGameReference {
     pauseEngine();
   }
 
-  /// Yeni run başlat — yeni harita, sıfırlanmış state, yeni modifier seçimi.
+  /// Yeni run: harita + state tamamen sıfırlanır, yeni modifier seçimi açılır.
   void startNewRun() {
     // State sıfırla
     runEnded = false;
@@ -528,4 +530,10 @@ class TdGame extends FlameGame with HasGameReference {
     resumeEngine();
     _showModifierSelection();
   }
+}
+
+class _ObstacleCluster {
+  final Vector2 center;
+  final Set<PositionComponent> remaining;
+  _ObstacleCluster({required this.center, required this.remaining});
 }

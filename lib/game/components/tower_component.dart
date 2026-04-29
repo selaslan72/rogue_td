@@ -5,6 +5,7 @@ import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 import '../../models/run_stats.dart';
 import '../../models/tower_card.dart';
+import 'damageable.dart';
 import 'enemy_component.dart';
 import 'particle_effect.dart';
 import 'projectile_component.dart';
@@ -23,7 +24,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   late int investedGold;
 
   double _cooldown = 0;
-  EnemyComponent? _currentTarget;
+  Damageable? _currentTarget;
   double _muzzleFlash = 0;
 
   late final Paint _bodyPaint;
@@ -129,34 +130,51 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     }
   }
 
-  bool _inRange(EnemyComponent enemy) {
-    return enemy.worldPosition.distanceTo(position) <= currentRange;
+  bool _inRange(Damageable d) {
+    return d.worldPosition.distanceTo(position) <= currentRange;
   }
 
-  EnemyComponent? _acquireTarget() {
-    final enemies = parent?.children.whereType<EnemyComponent>().where(
-      _inRange,
-    );
-    if (enemies == null || enemies.isEmpty) return null;
-
-    switch (targeting) {
-      case TargetingMode.first:
-        return enemies.reduce(
-          (a, b) => a.pathProgress > b.pathProgress ? a : b,
-        );
-      case TargetingMode.strongest:
-        return enemies.reduce((a, b) => a.def.maxHp > b.def.maxHp ? a : b);
-      case TargetingMode.weakest:
-        return enemies.reduce((a, b) => a.hpRatio < b.hpRatio ? a : b);
-      case TargetingMode.closest:
-        return enemies.reduce(
-          (a, b) =>
-              a.worldPosition.distanceTo(position) <
-                  b.worldPosition.distanceTo(position)
-              ? a
-              : b,
-        );
+  Damageable? _acquireTarget() {
+    // Önce düşman — targeting mode uygulanır.
+    final enemies = parent?.children
+            .whereType<EnemyComponent>()
+            .where(_inRange)
+            .toList() ??
+        [];
+    if (enemies.isNotEmpty) {
+      switch (targeting) {
+        case TargetingMode.first:
+          return enemies.reduce(
+            (a, b) => a.pathProgress > b.pathProgress ? a : b,
+          );
+        case TargetingMode.strongest:
+          return enemies.reduce((a, b) => a.def.maxHp > b.def.maxHp ? a : b);
+        case TargetingMode.weakest:
+          return enemies.reduce((a, b) => a.hpRatio < b.hpRatio ? a : b);
+        case TargetingMode.closest:
+          return enemies.reduce(
+            (a, b) =>
+                a.worldPosition.distanceTo(position) <
+                        b.worldPosition.distanceTo(position)
+                    ? a
+                    : b,
+          );
+      }
     }
+    // Düşman yoksa menzildeki en yakın engeli vur (ağaç/kaya).
+    Damageable? bestObstacle;
+    double bestDist = double.infinity;
+    for (final c in parent?.children ?? const []) {
+      if (c is EnemyComponent) continue;
+      if (c is! Damageable) continue;
+      if (!c.isAlive) continue;
+      final dist = c.worldPosition.distanceTo(position);
+      if (dist <= currentRange && dist < bestDist) {
+        bestDist = dist;
+        bestObstacle = c;
+      }
+    }
+    return bestObstacle;
   }
 
   void _spawnHit(Vector2 worldPos) {
@@ -170,7 +188,34 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     );
   }
 
-  void _fire(EnemyComponent target) {
+  void _fire(Damageable target) {
+    if (target is! EnemyComponent) {
+      switch (card.type) {
+        case TowerType.singleTarget:
+          parent?.add(ProjectileComponent(
+            worldPosition: position.clone(),
+            target: target,
+            damage: currentDamage,
+            color: card.color,
+            visual: ProjectileVisual.arrow,
+            speed: 360,
+          ));
+        case TowerType.splash:
+          parent?.add(ProjectileComponent(
+            worldPosition: position.clone(),
+            target: target,
+            damage: currentDamage,
+            color: card.color,
+            visual: ProjectileVisual.ball,
+            speed: 240,
+            splashRadius: 60,
+          ));
+        default:
+          target.takeDamage(currentDamage);
+          _spawnHit(target.worldPosition.clone());
+      }
+      return;
+    }
     switch (card.type) {
       case TowerType.singleTarget:
         parent?.add(
@@ -203,7 +248,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
         target.takeDamage(currentDamage);
         _spawnHit(target.worldPosition.clone());
       case TowerType.chain:
-        // Tesla = 2 zincir, Lightning = 3, Frost King = 3, default 2
+        // Tesla = 2 zincir, default 2
         final chainCount = card.id == 'lightning' || card.id == 'frost-king'
             ? 3
             : 2;

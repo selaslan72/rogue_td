@@ -3,12 +3,13 @@ import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 import '../../models/enemy_def.dart';
+import 'damageable.dart';
 import 'particle_effect.dart';
 
 /// Yol üzerinde waypoint'leri takip eden düşman.
 /// HP bittiğinde ölür ve callback'le altın verir.
 /// Yola sızarsa (son waypoint geçilirse) can düşürür.
-class EnemyComponent extends PositionComponent {
+class EnemyComponent extends PositionComponent implements Damageable {
   final EnemyDef def;
   final List<Vector2> waypoints;
   final void Function(EnemyComponent self) onKilled;
@@ -60,7 +61,9 @@ class EnemyComponent extends PositionComponent {
   final double _speedMul;
 
   double get hpRatio => (_hp / (def.maxHp * _hpMul)).clamp(0.0, 1.0);
+  @override
   bool get isAlive => _hp > 0;
+  @override
   Vector2 get worldPosition => position;
   double get pathProgress {
     if (waypoints.length < 2) return 0;
@@ -75,6 +78,7 @@ class EnemyComponent extends PositionComponent {
     return (_waypointIndex - 1) + segmentProgress.clamp(0.0, 1.0);
   }
 
+  @override
   void takeDamage(double amount) {
     if (!isAlive) return;
     final effective = (amount - def.armor).clamp(0.0, double.infinity);

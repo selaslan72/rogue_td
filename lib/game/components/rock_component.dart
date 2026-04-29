@@ -1,21 +1,28 @@
 import 'dart:math' as math;
 import 'package:flame/components.dart';
-import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
+import 'damageable.dart';
 
-/// Dekoratif kaya. Path üstü, enemy altı (priority -5), ağaçlarla aynı katman.
-/// Stil: yuvarlağımsı taş + alt gölge + üst highlight.
-class RockComponent extends PositionComponent with TapCallbacks {
+/// Dövülebilir kaya. Path üstü, enemy altı (priority -5).
+/// Tower hp'sini 0'a indirince yerine yeni TowerSlot açılır (td_game tarafında).
+class RockComponent extends PositionComponent implements Damageable {
   final double sizeScale;
   final int seed;
-  final void Function(RockComponent rock)? onTap;
+  final int clusterId;
+  final void Function(RockComponent rock)? onDestroyed;
+
+  double _hp;
+  double _hitFlash = 0;
 
   RockComponent({
     required Vector2 worldPosition,
     this.sizeScale = 1.0,
     this.seed = 0,
-    this.onTap,
-  }) : super(
+    this.clusterId = -1,
+    this.onDestroyed,
+    double maxHp = 70,
+  })  : _hp = maxHp,
+        super(
           position: worldPosition,
           size: Vector2(28, 22) * sizeScale,
           anchor: Anchor.center,
@@ -23,10 +30,26 @@ class RockComponent extends PositionComponent with TapCallbacks {
         );
 
   @override
-  bool onTapDown(TapDownEvent event) {
-    if (onTap == null) return false;
-    onTap!(this);
-    return true;
+  bool get isAlive => _hp > 0;
+
+  @override
+  Vector2 get worldPosition => position;
+
+  @override
+  void takeDamage(double amount) {
+    if (_hp <= 0) return;
+    _hp -= amount;
+    _hitFlash = 1.0;
+    if (_hp <= 0 && isMounted) {
+      onDestroyed?.call(this);
+      removeFromParent();
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (_hitFlash > 0) _hitFlash -= dt * 4;
   }
 
   static final _shadowPaint = Paint()..color = const Color(0x66000000);
@@ -45,13 +68,11 @@ class RockComponent extends PositionComponent with TapCallbacks {
     final cx = w / 2;
     final cy = h / 2;
 
-    // Alt gölge — toprağa basıyormuş hissi
     canvas.drawOval(
       Rect.fromCenter(center: Offset(cx, h - 2), width: w * 0.9, height: h * 0.25),
       _shadowPaint,
     );
 
-    // Ana gövde — düzensiz oval (seed'e göre hafif varyasyon)
     final rng = math.Random(seed);
     final body = Path();
     const steps = 10;
@@ -72,14 +93,11 @@ class RockComponent extends PositionComponent with TapCallbacks {
     canvas.drawPath(body, _bodyPaint);
     canvas.drawPath(body, _outlinePaint);
 
-    // Alt yarıyı koyulaştır
     canvas.save();
     canvas.clipPath(body);
-    canvas.drawRect(
-        Rect.fromLTWH(0, cy + 2, w, h), _bodyDarkPaint);
+    canvas.drawRect(Rect.fromLTWH(0, cy + 2, w, h), _bodyDarkPaint);
     canvas.restore();
 
-    // Üst highlight
     canvas.drawOval(
       Rect.fromCenter(
           center: Offset(cx - w * 0.15, cy - h * 0.18),
@@ -87,5 +105,12 @@ class RockComponent extends PositionComponent with TapCallbacks {
           height: h * 0.18),
       _highlightPaint,
     );
+
+    if (_hitFlash > 0) {
+      canvas.drawPath(
+        body,
+        Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.55 * _hitFlash.clamp(0, 1)),
+      );
+    }
   }
 }
