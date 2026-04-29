@@ -72,6 +72,15 @@ class TdGame extends FlameGame with HasGameReference {
 
   late CardPool cardPool;
 
+  // Hız çarpanı — 1.0 (normal) veya 1.5 (hızlı)
+  double _gameSpeed = 1.0;
+  final ValueNotifier<bool> speedUpNotifier = ValueNotifier(false);
+
+  void toggleSpeed() {
+    speedUpNotifier.value = !speedUpNotifier.value;
+    _gameSpeed = speedUpNotifier.value ? 1.5 : 1.0;
+  }
+
   // Wave spawning
   double _spawnTimer = 0;
   double _spawnInterval = 1.5;
@@ -294,7 +303,7 @@ class TdGame extends FlameGame with HasGameReference {
 
   @override
   void update(double dt) {
-    super.update(dt);
+    super.update(dt * _gameSpeed);
     if (runEnded) return;
 
     if (waveActive && _waveQueue.isNotEmpty) {

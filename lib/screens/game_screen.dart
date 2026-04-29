@@ -44,6 +44,11 @@ class _GameScreenState extends State<GameScreen> {
                     left: 92,
                     child: _TowerSelector(game: _game),
                   ),
+                  Positioned(
+                    left: 4,
+                    bottom: 8,
+                    child: _SpeedButton(game: _game),
+                  ),
                   Positioned.fill(child: _UpgradeOverlay(game: _game)),
                   Positioned.fill(child: _CardSelectOverlay(game: _game)),
                   Positioned.fill(child: _ModifierSelectOverlay(game: _game)),
@@ -877,6 +882,46 @@ class _RunResultOverlay extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _SpeedButton extends StatelessWidget {
+  final TdGame game;
+  const _SpeedButton({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: game.speedUpNotifier,
+      builder: (_, isFast, _) => GestureDetector(
+        onTap: game.toggleSpeed,
+        child: Container(
+          width: 80,
+          height: 80,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isFast
+                ? const Color(0x99FBAA24)
+                : const Color(0x661A1A2E),
+            border: Border.all(
+              color: isFast ? const Color(0xFFFBBF24) : Colors.white30,
+              width: isFast ? 2 : 1,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            isFast ? '⏩\n1.5×' : '▶️\n1×',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.4,
+              color: isFast ? Colors.white : Colors.white70,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
