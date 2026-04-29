@@ -1,20 +1,30 @@
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 
 /// Dekoratif ağaç. Path ve düşmanın altında, arkaplan üstünde render olur.
 /// Stil: kahverengi gövde + 2 katmanlı yeşil tepelik.
-class TreeComponent extends PositionComponent {
+class TreeComponent extends PositionComponent with TapCallbacks {
   final double sizeScale;
+  final void Function(TreeComponent tree)? onTap;
 
   TreeComponent({
     required Vector2 worldPosition,
     this.sizeScale = 1.0,
+    this.onTap,
   }) : super(
           position: worldPosition,
           size: Vector2(24, 32) * sizeScale,
           anchor: Anchor.bottomCenter,
           priority: -5, // path (-10) üstü, enemy (5) altı
         );
+
+  @override
+  bool onTapDown(TapDownEvent event) {
+    if (onTap == null) return false;
+    onTap!(this);
+    return true;
+  }
 
   static final _trunkPaint = Paint()..color = const Color(0xFF6B3410);
   static final _trunkShadowPaint = Paint()..color = const Color(0xFF4A2208);

@@ -12,6 +12,7 @@ import '../models/tower_card.dart';
 import 'card_pool.dart';
 import 'components/castle_component.dart';
 import 'components/enemy_component.dart';
+import 'components/particle_effect.dart';
 import 'components/path_component.dart';
 import 'components/rock_component.dart';
 import 'components/tower_component.dart';
@@ -111,7 +112,11 @@ class TdGame extends FlameGame with HasGameReference {
     add(CastleComponent(worldPosition: map.waypoints.last, isEntry: false));
 
     for (final (x, y, treeScale) in map.treePositions) {
-      add(TreeComponent(worldPosition: Vector2(x, y), sizeScale: treeScale));
+      add(TreeComponent(
+        worldPosition: Vector2(x, y),
+        sizeScale: treeScale,
+        onTap: _handleTreeTap,
+      ));
     }
 
     int rockSeed = 0;
@@ -121,6 +126,7 @@ class TdGame extends FlameGame with HasGameReference {
           worldPosition: Vector2(x, y),
           sizeScale: rockScale,
           seed: rockSeed++,
+          onTap: _handleRockTap,
         ),
       );
     }
@@ -172,6 +178,48 @@ class TdGame extends FlameGame with HasGameReference {
         slot: slot,
       ),
     );
+  }
+
+  static const int treeClearCost = 15;
+  static const int rockClearCost = 35;
+
+  void _handleTreeTap(TreeComponent tree) {
+    if (runEnded) return;
+    if (gold < treeClearCost) {
+      _flashMessage('Not enough gold ($treeClearCost)');
+      return;
+    }
+    gold -= treeClearCost;
+    goldNotifier.value = gold;
+    // Tree anchor bottomCenter — slot center'a yükseltelim
+    final slotPos = Vector2(tree.position.x, tree.position.y - tree.size.y / 2);
+    add(ParticleEffect(
+      worldPosition: slotPos,
+      color: const Color(0xFF4A8A3A),
+      duration: 0.35,
+      maxRadius: 14,
+    ));
+    tree.removeFromParent();
+    add(TowerSlot(worldPosition: slotPos, onTap: _handleSlotTap));
+  }
+
+  void _handleRockTap(RockComponent rock) {
+    if (runEnded) return;
+    if (gold < rockClearCost) {
+      _flashMessage('Not enough gold ($rockClearCost)');
+      return;
+    }
+    gold -= rockClearCost;
+    goldNotifier.value = gold;
+    final slotPos = rock.position.clone();
+    add(ParticleEffect(
+      worldPosition: slotPos,
+      color: const Color(0xFFB7BFCB),
+      duration: 0.35,
+      maxRadius: 16,
+    ));
+    rock.removeFromParent();
+    add(TowerSlot(worldPosition: slotPos, onTap: _handleSlotTap));
   }
 
   void selectTower(TowerCard card) {

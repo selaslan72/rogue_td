@@ -1,23 +1,33 @@
 import 'dart:math' as math;
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 
 /// Dekoratif kaya. Path üstü, enemy altı (priority -5), ağaçlarla aynı katman.
 /// Stil: yuvarlağımsı taş + alt gölge + üst highlight.
-class RockComponent extends PositionComponent {
+class RockComponent extends PositionComponent with TapCallbacks {
   final double sizeScale;
   final int seed;
+  final void Function(RockComponent rock)? onTap;
 
   RockComponent({
     required Vector2 worldPosition,
     this.sizeScale = 1.0,
     this.seed = 0,
+    this.onTap,
   }) : super(
           position: worldPosition,
           size: Vector2(28, 22) * sizeScale,
           anchor: Anchor.center,
           priority: -5,
         );
+
+  @override
+  bool onTapDown(TapDownEvent event) {
+    if (onTap == null) return false;
+    onTap!(this);
+    return true;
+  }
 
   static final _shadowPaint = Paint()..color = const Color(0x66000000);
   static final _bodyPaint = Paint()..color = const Color(0xFF6B7280);
