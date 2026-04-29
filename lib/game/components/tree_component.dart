@@ -1,14 +1,18 @@
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 import 'damageable.dart';
 
 /// Dekoratif + dövülebilir ağaç. Path ve düşmanın altında render olur.
-/// Towerlar enemy yokken menzilindeki en yakın ağacı vurur; hp 0'da yıkılır.
-class TreeComponent extends PositionComponent implements Damageable {
+/// Tower otomatik vurmaz — kullanıcı tıklayınca "selected" olur,
+/// menzilindeki tower'lar ona ateş eder. HP 0'da yıkılır.
+class TreeComponent extends PositionComponent with TapCallbacks implements Damageable {
   final double sizeScale;
   final int clusterId;
   final void Function(TreeComponent tree)? onDestroyed;
+  final void Function(TreeComponent tree)? onTap;
 
+  bool selected = false;
   double _hp;
   double get hp => _hp;
   double _hitFlash = 0;
@@ -18,6 +22,7 @@ class TreeComponent extends PositionComponent implements Damageable {
     this.sizeScale = 1.0,
     this.clusterId = -1,
     this.onDestroyed,
+    this.onTap,
     double maxHp = 24,
   })  : _hp = maxHp,
         super(
@@ -26,6 +31,12 @@ class TreeComponent extends PositionComponent implements Damageable {
           anchor: Anchor.bottomCenter,
           priority: -5,
         );
+
+  @override
+  bool onTapDown(TapDownEvent event) {
+    onTap?.call(this);
+    return true;
+  }
 
   @override
   bool get isAlive => _hp > 0;
@@ -100,6 +111,17 @@ class TreeComponent extends PositionComponent implements Damageable {
         Offset(cx, canopyBottomY - h * 0.25),
         w * 0.55,
         Paint()..color = _flashPaint.color.withValues(alpha: 0.5 * _hitFlash.clamp(0, 1)),
+      );
+    }
+
+    if (selected) {
+      canvas.drawCircle(
+        Offset(cx, canopyBottomY - h * 0.25),
+        w * 0.62,
+        Paint()
+          ..color = const Color(0xFFFBBF24)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0,
       );
     }
   }

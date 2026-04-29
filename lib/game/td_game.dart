@@ -11,6 +11,7 @@ import '../models/run_stats.dart';
 import '../models/tower_card.dart';
 import 'card_pool.dart';
 import 'components/castle_component.dart';
+import 'components/damageable.dart';
 import 'components/enemy_component.dart';
 import 'components/particle_effect.dart';
 import 'components/path_component.dart';
@@ -77,6 +78,11 @@ class TdGame extends FlameGame with HasGameReference {
   final Map<int, _ObstacleCluster> _clusters = {};
   int _nextClusterId = 0;
 
+  // Kullanıcı tarafından tıklanan ve tower'ların hedeflediği tek engel.
+  // Null ise tower'lar sadece düşmanlara saldırır.
+  Damageable? _selectedObstacle;
+  Damageable? get selectedObstacle => _selectedObstacle;
+
   // Hız çarpanı — 1.0 (normal) veya 1.5 (hızlı)
   double _gameSpeed = 1.0;
   final ValueNotifier<bool> speedUpNotifier = ValueNotifier(false);
@@ -133,6 +139,7 @@ class TdGame extends FlameGame with HasGameReference {
           sizeScale: 1.0,
           clusterId: id,
           onDestroyed: (t) => _onObstacleDestroyed(t, t.clusterId),
+          onTap: _handleTreeTap,
         );
         remaining.add(tree);
         add(tree);
@@ -150,6 +157,7 @@ class TdGame extends FlameGame with HasGameReference {
         seed: rockSeed++,
         clusterId: id,
         onDestroyed: (r) => _onObstacleDestroyed(r, r.clusterId),
+        onTap: _handleRockTap,
       );
       _clusters[id] = _ObstacleCluster(center: center, remaining: {rock});
       add(rock);
@@ -160,7 +168,32 @@ class TdGame extends FlameGame with HasGameReference {
     }
   }
 
+  void _handleTreeTap(TreeComponent tree) => _toggleObstacleSelection(tree);
+  void _handleRockTap(RockComponent rock) => _toggleObstacleSelection(rock);
+
+  void _toggleObstacleSelection(Damageable target) {
+    if (runEnded) return;
+    if (identical(_selectedObstacle, target)) {
+      _setObstacleSelected(target, false);
+      _selectedObstacle = null;
+      return;
+    }
+    if (_selectedObstacle != null) {
+      _setObstacleSelected(_selectedObstacle!, false);
+    }
+    _selectedObstacle = target;
+    _setObstacleSelected(target, true);
+  }
+
+  void _setObstacleSelected(Damageable d, bool value) {
+    if (d is TreeComponent) d.selected = value;
+    if (d is RockComponent) d.selected = value;
+  }
+
   void _onObstacleDestroyed(PositionComponent obstacle, int clusterId) {
+    if (identical(_selectedObstacle, obstacle)) {
+      _selectedObstacle = null;
+    }
     final cluster = _clusters[clusterId];
     if (cluster == null) return;
     cluster.remaining.remove(obstacle);
@@ -182,6 +215,7 @@ class TdGame extends FlameGame with HasGameReference {
   void _clearMap() {
     _clusters.clear();
     _nextClusterId = 0;
+    _selectedObstacle = null;
     final removable = children
         .where(
           (c) =>

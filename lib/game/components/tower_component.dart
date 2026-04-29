@@ -5,6 +5,7 @@ import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 import '../../models/run_stats.dart';
 import '../../models/tower_card.dart';
+import '../td_game.dart';
 import 'damageable.dart';
 import 'enemy_component.dart';
 import 'particle_effect.dart';
@@ -135,46 +136,40 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   }
 
   Damageable? _acquireTarget() {
-    // Önce düşman — targeting mode uygulanır.
+    // Kullanıcı bir engele tıkladıysa ve menzildeyse — onu hedef al.
+    // Düşman gelse bile geçiş yapma (kullanıcının kararı önceliklidir).
+    final game = findGame();
+    if (game is TdGame) {
+      final sel = game.selectedObstacle;
+      if (sel != null && sel.isMounted && sel.isAlive && _inRange(sel)) {
+        return sel;
+      }
+    }
+    // Aksi halde düşman targeting (otomatik obstacle saldırısı yok).
     final enemies = parent?.children
             .whereType<EnemyComponent>()
             .where(_inRange)
             .toList() ??
         [];
-    if (enemies.isNotEmpty) {
-      switch (targeting) {
-        case TargetingMode.first:
-          return enemies.reduce(
-            (a, b) => a.pathProgress > b.pathProgress ? a : b,
-          );
-        case TargetingMode.strongest:
-          return enemies.reduce((a, b) => a.def.maxHp > b.def.maxHp ? a : b);
-        case TargetingMode.weakest:
-          return enemies.reduce((a, b) => a.hpRatio < b.hpRatio ? a : b);
-        case TargetingMode.closest:
-          return enemies.reduce(
-            (a, b) =>
-                a.worldPosition.distanceTo(position) <
-                        b.worldPosition.distanceTo(position)
-                    ? a
-                    : b,
-          );
-      }
+    if (enemies.isEmpty) return null;
+    switch (targeting) {
+      case TargetingMode.first:
+        return enemies.reduce(
+          (a, b) => a.pathProgress > b.pathProgress ? a : b,
+        );
+      case TargetingMode.strongest:
+        return enemies.reduce((a, b) => a.def.maxHp > b.def.maxHp ? a : b);
+      case TargetingMode.weakest:
+        return enemies.reduce((a, b) => a.hpRatio < b.hpRatio ? a : b);
+      case TargetingMode.closest:
+        return enemies.reduce(
+          (a, b) =>
+              a.worldPosition.distanceTo(position) <
+                      b.worldPosition.distanceTo(position)
+                  ? a
+                  : b,
+        );
     }
-    // Düşman yoksa menzildeki en yakın engeli vur (ağaç/kaya).
-    Damageable? bestObstacle;
-    double bestDist = double.infinity;
-    for (final c in parent?.children ?? const []) {
-      if (c is EnemyComponent) continue;
-      if (c is! Damageable) continue;
-      if (!c.isAlive) continue;
-      final dist = c.worldPosition.distanceTo(position);
-      if (dist <= currentRange && dist < bestDist) {
-        bestDist = dist;
-        bestObstacle = c;
-      }
-    }
-    return bestObstacle;
   }
 
   void _spawnHit(Vector2 worldPos) {

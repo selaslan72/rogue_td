@@ -2,16 +2,16 @@ import 'dart:math' as math;
 
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
-import 'enemy_component.dart';
+import 'damageable.dart';
 import 'particle_effect.dart';
 
 enum ProjectileVisual { arrow, ball }
 
-/// Tower'dan düşmana giden homing mermi.
+/// Tower'dan hedefe giden homing mermi.
 /// Hedef ölürse son bilinen pozisyona uçar; çarpınca damage uygular,
-/// splashRadius > 0 ise yakındaki düşmanlara da hasar verir.
+/// splashRadius > 0 ise yakındaki Damageable'lara da hasar verir.
 class ProjectileComponent extends PositionComponent {
-  final EnemyComponent target;
+  final Damageable target;
   final double damage;
   final Color color;
   final ProjectileVisual visual;
@@ -79,11 +79,11 @@ class ProjectileComponent extends PositionComponent {
       target.takeDamage(damage);
     }
     if (splashRadius > 0) {
-      for (final e in game.children.whereType<EnemyComponent>()) {
-        if (e == target) continue;
-        if (!e.isAlive) continue;
-        if (e.worldPosition.distanceTo(impactPos) <= splashRadius) {
-          e.takeDamage(damage * 0.6);
+      for (final d in game.children.whereType<Damageable>()) {
+        if (identical(d, target)) continue;
+        if (!d.isAlive) continue;
+        if (d.worldPosition.distanceTo(impactPos) <= splashRadius) {
+          d.takeDamage(damage * 0.6);
         }
       }
     }

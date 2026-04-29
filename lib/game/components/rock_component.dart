@@ -1,16 +1,20 @@
 import 'dart:math' as math;
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 import 'damageable.dart';
 
 /// Dövülebilir kaya. Path üstü, enemy altı (priority -5).
-/// Tower hp'sini 0'a indirince yerine yeni TowerSlot açılır (td_game tarafında).
-class RockComponent extends PositionComponent implements Damageable {
+/// Kullanıcı tıklayınca "selected" olur — menzilindeki tower ateş eder.
+/// HP 0'da yerine yeni TowerSlot açılır (td_game tarafında).
+class RockComponent extends PositionComponent with TapCallbacks implements Damageable {
   final double sizeScale;
   final int seed;
   final int clusterId;
   final void Function(RockComponent rock)? onDestroyed;
+  final void Function(RockComponent rock)? onTap;
 
+  bool selected = false;
   double _hp;
   double _hitFlash = 0;
 
@@ -20,6 +24,7 @@ class RockComponent extends PositionComponent implements Damageable {
     this.seed = 0,
     this.clusterId = -1,
     this.onDestroyed,
+    this.onTap,
     double maxHp = 70,
   })  : _hp = maxHp,
         super(
@@ -28,6 +33,12 @@ class RockComponent extends PositionComponent implements Damageable {
           anchor: Anchor.center,
           priority: -5,
         );
+
+  @override
+  bool onTapDown(TapDownEvent event) {
+    onTap?.call(this);
+    return true;
+  }
 
   @override
   bool get isAlive => _hp > 0;
@@ -105,6 +116,16 @@ class RockComponent extends PositionComponent implements Damageable {
           height: h * 0.18),
       _highlightPaint,
     );
+
+    if (selected) {
+      canvas.drawPath(
+        body,
+        Paint()
+          ..color = const Color(0xFFFBBF24)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0,
+      );
+    }
 
     if (_hitFlash > 0) {
       canvas.drawPath(
