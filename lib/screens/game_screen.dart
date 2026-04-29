@@ -654,7 +654,7 @@ class _TowerSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 92,
+      height: 96,
       child: ValueListenableBuilder<List<TowerCard>>(
         valueListenable: game.unlockedNotifier,
         builder: (_, unlocked, _) => ValueListenableBuilder<TowerCard>(
@@ -967,7 +967,7 @@ class _SpeedButton extends StatelessWidget {
         onTap: game.toggleSpeed,
         child: Container(
           width: 80,
-          height: 92,
+          height: 96,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: isFast

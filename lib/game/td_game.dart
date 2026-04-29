@@ -162,7 +162,7 @@ class TdGame extends FlameGame with HasGameReference {
     goldNotifier.value = gold;
 
     slot.isOccupied = true;
-    selectedExistingTowerNotifier.value = null;
+    _clearSelectedExisting();
     add(
       TowerComponent(
         card: selectedTower,
@@ -208,6 +208,8 @@ class TdGame extends FlameGame with HasGameReference {
     goldNotifier.value = gold;
     tower.upgrade();
     tower.investedGold += cost;
+    // Range circle gitsin ama panel açık kalsın (üst üste upgrade için)
+    tower.showRange = false;
     selectedExistingTowerNotifier.value = null;
     selectedExistingTowerNotifier.value = tower;
   }
@@ -239,9 +241,12 @@ class TdGame extends FlameGame with HasGameReference {
     waveEnemiesRemaining = _waveQueue.length;
     waveActive = true;
     _spawnTimer = 0;
+    // Boss wave'lerde daha geniş aralık; normal wave'lerde wave'le birlikte kısalsın
     _spawnInterval = wave == maxWaves
-        ? 2.5
-        : (wave == 5 || wave == 10 ? 2.0 : 1.5);
+        ? 2.0
+        : (wave == 5 || wave == 10
+              ? 1.8
+              : (1.5 - (wave - 1) * 0.06).clamp(0.55, 1.5));
     _flashMessage(
       wave == maxWaves
           ? 'FINAL BOSS'
@@ -330,14 +335,17 @@ class TdGame extends FlameGame with HasGameReference {
   void _spawnNextEnemy() {
     if (_waveQueue.isEmpty) return;
     final def = _waveQueue.removeAt(0);
+    // Wave bazlı zorluk: HP %8/wave, hız %2/wave artar
+    final waveHpScale = 1.0 + (wave - 1) * 0.08;
+    final waveSpeedScale = 1.0 + (wave - 1) * 0.02;
     add(
       EnemyComponent(
         def: def,
         waypoints: currentMap.waypoints,
         onKilled: _onEnemyKilled,
         onLeaked: _onEnemyLeaked,
-        hpMultiplier: stats.enemyHpMul,
-        speedMultiplier: stats.enemySpeedMul,
+        hpMultiplier: stats.enemyHpMul * waveHpScale,
+        speedMultiplier: stats.enemySpeedMul * waveSpeedScale,
       ),
     );
     waveEnemiesRemaining = _waveQueue.length;
@@ -380,9 +388,7 @@ class TdGame extends FlameGame with HasGameReference {
     cardPool.recoverWeights();
     cardSelectNotifier.value = null;
     resumeEngine();
-    Future.delayed(const Duration(seconds: 2), () {
-      if (!runEnded && lives > 0) startNextWave();
-    });
+    if (!runEnded && lives > 0) startNextWave();
   }
 
   // ─── Modifier seçim akışı (run başı) ──────────────────────────────────────
