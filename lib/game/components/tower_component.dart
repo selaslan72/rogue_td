@@ -7,13 +7,14 @@ import '../../models/run_stats.dart';
 import '../../models/tower_card.dart';
 import 'enemy_component.dart';
 import 'particle_effect.dart';
+import 'projectile_component.dart';
 import 'tower_slot.dart';
 
 /// Yerleştirilmiş tower. Range içindeki düşmanları tarayıp ateş eder.
 /// MVP'de projectile yok — instant hit + flash + particle efekti.
 class TowerComponent extends PositionComponent with TapCallbacks {
   final TowerCard card;
-  final TargetingMode targeting;
+  TargetingMode targeting;
   final void Function(TowerComponent) onTap;
   final RunStats stats;
   final TowerSlot slot;
@@ -172,20 +173,28 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   void _fire(EnemyComponent target) {
     switch (card.type) {
       case TowerType.singleTarget:
-        target.takeDamage(currentDamage);
-        _spawnHit(target.worldPosition.clone());
+        parent?.add(
+          ProjectileComponent(
+            worldPosition: position.clone(),
+            target: target,
+            damage: currentDamage,
+            color: card.color,
+            visual: ProjectileVisual.arrow,
+            speed: 360,
+          ),
+        );
       case TowerType.splash:
-        target.takeDamage(currentDamage);
-        _spawnHit(target.worldPosition.clone());
-        const splashRadius = 60.0;
-        final others = parent?.children.whereType<EnemyComponent>() ?? [];
-        for (final e in others) {
-          if (e != target &&
-              e.worldPosition.distanceTo(target.worldPosition) <=
-                  splashRadius) {
-            e.takeDamage(currentDamage * 0.6);
-          }
-        }
+        parent?.add(
+          ProjectileComponent(
+            worldPosition: position.clone(),
+            target: target,
+            damage: currentDamage,
+            color: card.color,
+            visual: ProjectileVisual.ball,
+            speed: 240,
+            splashRadius: 60,
+          ),
+        );
       case TowerType.slow:
         target.takeDamage(currentDamage);
         target.applySlow(0.5, 1.5);

@@ -327,6 +327,8 @@ class _UpgradePanel extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          _TargetingRow(game: game, tower: tower),
           const SizedBox(height: 10),
           // Upgrade / max
           if (!canUp)
@@ -378,6 +380,62 @@ class _UpgradePanel extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+class _TargetingRow extends StatelessWidget {
+  final TdGame game;
+  final TowerComponent tower;
+  const _TargetingRow({required this.game, required this.tower});
+
+  static const _labels = {
+    TargetingMode.first: 'FIRST',
+    TargetingMode.strongest: 'STRONG',
+    TargetingMode.weakest: 'WEAK',
+    TargetingMode.closest: 'CLOSE',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: TargetingMode.values.map((mode) {
+        final selected = tower.targeting == mode;
+        return Expanded(
+          child: GestureDetector(
+            onTap: () {
+              tower.targeting = mode;
+              // Force rebuild — aynı referans değiştiği için null→tower
+              game.selectedExistingTowerNotifier.value = null;
+              game.selectedExistingTowerNotifier.value = tower;
+            },
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: selected
+                    ? tower.card.color.withValues(alpha: 0.35)
+                    : Colors.white10,
+                border: Border.all(
+                  color: selected ? tower.card.color : Colors.white24,
+                  width: selected ? 1.5 : 1,
+                ),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                _labels[mode]!,
+                style: TextStyle(
+                  color: selected ? Colors.white : Colors.white60,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.6,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
