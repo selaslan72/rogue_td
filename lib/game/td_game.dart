@@ -418,7 +418,7 @@ class TdGame extends FlameGame with HasGameReference {
 
     modifierSelectNotifier.value = null;
     resumeEngine();
-    Future.delayed(const Duration(seconds: 2), startNextWave);
+    startNextWave();
   }
 
   // ─── Run sonlandırma + yeni run ───────────────────────────────────────────
