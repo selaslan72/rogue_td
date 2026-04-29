@@ -114,15 +114,9 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     if (_cooldown > 0) _cooldown -= dt;
     if (_muzzleFlash > 0) _muzzleFlash -= dt * 4;
 
-    if (_currentTarget != null) {
-      if (!_currentTarget!.isMounted ||
-          !_currentTarget!.isAlive ||
-          !_inRange(_currentTarget!)) {
-        _currentTarget = null;
-      }
-    }
-
-    _currentTarget ??= _acquireTarget();
+    // Her frame yeniden hedefle: kullanıcı bir engele tıkladığında düşmandan
+    // engele anında geçilsin; deselect olunca düşmana dönülsün.
+    _currentTarget = _acquireTarget();
 
     if (_currentTarget != null && _cooldown <= 0) {
       _fire(_currentTarget!);
