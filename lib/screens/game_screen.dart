@@ -293,6 +293,11 @@ class _UpgradeOverlay extends StatelessWidget {
   final TdGame game;
   const _UpgradeOverlay({required this.game});
 
+  static const double _worldW = 480;
+  static const double _worldH = 800;
+  static const double _panelW = 252;
+  static const double _panelH = 174;
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<TowerComponent?>(
@@ -302,12 +307,31 @@ class _UpgradeOverlay extends StatelessWidget {
         // Gold değişince butonun aktif/pasif durumu da güncellensin
         return ValueListenableBuilder<int>(
           valueListenable: game.goldNotifier,
-          builder: (_, _, _) => Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _UpgradePanel(game: game, tower: tower),
-            ),
+          builder: (_, _, _) => LayoutBuilder(
+            builder: (_, constraints) {
+              final scaleX = constraints.maxWidth / _worldW;
+              final scaleY = constraints.maxHeight / _worldH;
+              final towerX = tower.position.x * scaleX;
+              final towerY = tower.position.y * scaleY;
+              final left = (towerX + 24).clamp(
+                8.0,
+                constraints.maxWidth - _panelW - 8.0,
+              );
+              final top = (towerY - _panelH - 18).clamp(
+                8.0,
+                constraints.maxHeight - _panelH - 8.0,
+              );
+              return Stack(
+                children: [
+                  Positioned(
+                    left: left,
+                    top: top,
+                    width: _panelW,
+                    child: _UpgradePanel(game: game, tower: tower),
+                  ),
+                ],
+              );
+            },
           ),
         );
       },
@@ -329,39 +353,45 @@ class _UpgradePanel extends StatelessWidget {
     final hasGold = game.gold >= cost;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: const Color(0xE61A1A2E),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: card.color, width: 1.5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: card.color, width: 1.25),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x88000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header
           Row(
             children: [
-              Text(card.icon, style: const TextStyle(fontSize: 20)),
-              const SizedBox(width: 8),
+              Text(card.icon, style: const TextStyle(fontSize: 16)),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  '${card.name}  •  Lv.$lvl',
+                  '${card.name} Lv.$lvl',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    fontSize: 14,
+                    fontSize: 12,
                   ),
                 ),
               ),
               GestureDetector(
                 onTap: () => game.selectedExistingTowerNotifier.value = null,
-                child: const Icon(Icons.close, color: Colors.white54, size: 18),
+                child: const Icon(Icons.close, color: Colors.white54, size: 16),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          // Stats
+          const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -379,10 +409,9 @@ class _UpgradePanel extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           _TargetingRow(game: game, tower: tower),
-          const SizedBox(height: 10),
-          // Upgrade / max
+          const SizedBox(height: 8),
           if (!canUp)
             Row(
               children: [
@@ -393,7 +422,8 @@ class _UpgradePanel extends StatelessWidget {
                     style: TextStyle(
                       color: Color(0xFFFBBF24),
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
+                      fontSize: 11,
+                      letterSpacing: 1.0,
                     ),
                   ),
                 ),
@@ -413,15 +443,15 @@ class _UpgradePanel extends StatelessWidget {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                     ),
                     child: Text(
-                      hasGold ? 'UPGRADE  💰$cost' : 'Need 💰$cost',
+                      hasGold ? 'UP 💰$cost' : 'Need 💰$cost',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        letterSpacing: 1,
+                        fontSize: 11,
+                        letterSpacing: 0.7,
                       ),
                     ),
                   ),
@@ -463,7 +493,7 @@ class _TargetingRow extends StatelessWidget {
             },
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 2),
-              padding: const EdgeInsets.symmetric(vertical: 5),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: selected
@@ -479,9 +509,9 @@ class _TargetingRow extends StatelessWidget {
                 _labels[mode]!,
                 style: TextStyle(
                   color: selected ? Colors.white : Colors.white60,
-                  fontSize: 9,
+                  fontSize: 8,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 0.6,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
@@ -505,15 +535,15 @@ class _SellButton extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         foregroundColor: Colors.white70,
         side: const BorderSide(color: Colors.white24),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
       child: Text(
-        'SELL 💰$refund',
+        'SELL $refund',
         style: const TextStyle(
           fontWeight: FontWeight.bold,
-          fontSize: 11,
-          letterSpacing: 0.6,
+          fontSize: 10,
+          letterSpacing: 0.4,
         ),
       ),
     );
@@ -687,13 +717,10 @@ class _StatChip extends StatelessWidget {
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
-            fontSize: 13,
+            fontSize: 11,
           ),
         ),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white54, fontSize: 10),
-        ),
+        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 8)),
       ],
     );
   }

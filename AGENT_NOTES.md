@@ -389,3 +389,13 @@ toparla. Şu an `main` üzerindeyiz, working tree dirty.
 - Tower obstacle vururken slow/dot/chain skip — obstacle'a sadece direct
   damage. Frost ağaçı yavaşlatmaz, mantıklı.
 - Cluster yıkıldıktan sonra particle rengi: yeşil (ağaç) / gri (kaya).
+
+### 2026-04-29 — Codex compact upgrade popup
+
+- Upgrade panel eski alt modal görünümünden çıkarıldı; seçili kulenin sağ
+  üstüne yakın konumlanan kompakt popup olarak tasarlandı.
+- Popup 252px genişlikte tutuldu ve 480x800 world koordinatından ekrana
+  çevrilerek kenarlardan taşmayacak şekilde clamp ediliyor.
+- Header, stat değerleri, targeting butonları, upgrade ve sell aksiyonları
+  küçültüldü; panel oyun alanını daha az kaplıyor.
+- Doğrulama: `flutter analyze` temiz, `flutter build web` başarılı.
