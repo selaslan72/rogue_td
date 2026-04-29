@@ -29,16 +29,18 @@ class PathData {
 
   // ─── Forest generator ─────────────────────────────────────────────────────
 
-  /// Slot ölçüsünü baz alan hizalı ağaç grid'i. Path ve slotlardan uzak durur.
+  /// Slot ölçüsünü baz alan hizalı ağaç grid'i. Path, slot ve kayalardan uzak durur.
   static List<(double, double, double)> _forest({
     required List<Vector2> waypoints,
     required List<Vector2> slots,
+    List<(double, double, double)> rocks = const [],
     int seed = 1,
     double mapW = 480,
     double mapH = 800,
     double step = slotSide,
     double pathClearance = 36,
     double slotClearance = slotSide,
+    double rockClearance = 32,
   }) {
     final result = <(double, double, double)>[];
     final xOffset = 24.0 + (seed % 2) * (step / 2);
@@ -62,6 +64,15 @@ class PathData {
           final dx = s.x - tx;
           final dy = s.y - ty;
           if (dx * dx + dy * dy < slotClearance * slotClearance) {
+            blocked = true;
+            break;
+          }
+        }
+        if (blocked) continue;
+        for (final r in rocks) {
+          final dx = r.$1 - tx;
+          final dy = r.$2 - ty;
+          if (dx * dx + dy * dy < rockClearance * rockClearance) {
             blocked = true;
             break;
           }
@@ -127,19 +138,20 @@ class PathData {
       Vector2(420, 630),
       Vector2(60, 630),
     ];
+    const rocks = <(double, double, double)>[
+      (90, 100, 1.1),
+      (380, 100, 0.95),
+      (200, 410, 1.0),
+      (380, 580, 1.15),
+      (90, 770, 0.9),
+      (390, 770, 1.05),
+    ];
     return GameMap(
       name: 'Snake',
       waypoints: waypoints,
       towerSlots: slots,
-      treePositions: _forest(waypoints: waypoints, slots: slots, seed: 11),
-      rockPositions: const <(double, double, double)>[
-        (90, 100, 1.1),
-        (380, 100, 0.95),
-        (200, 410, 1.0),
-        (380, 580, 1.15),
-        (90, 770, 0.9),
-        (390, 770, 1.05),
-      ],
+      treePositions: _forest(waypoints: waypoints, slots: slots, rocks: rocks, seed: 11),
+      rockPositions: rocks,
     );
   }
 
@@ -156,7 +168,7 @@ class PathData {
       Vector2(60, 360),
       Vector2(60, 540),
       Vector2(420, 540),
-      Vector2(420, 800),
+      Vector2(420, 750),
     ];
     final slots = <Vector2>[
       Vector2(180, 90),
@@ -167,24 +179,23 @@ class PathData {
       Vector2(300, 450),
       Vector2(180, 630),
       Vector2(300, 630),
-      Vector2(160, 720),
-      Vector2(280, 720),
-      Vector2(160, 130),
-      Vector2(330, 470),
+      Vector2(160, 700),
+      Vector2(280, 700),
+    ];
+    const rocks = <(double, double, double)>[
+      (130, 50, 1.0),
+      (370, 50, 1.15),
+      (350, 280, 0.9),
+      (130, 460, 1.0),
+      (380, 660, 0.95),
+      (110, 660, 1.1),
     ];
     return GameMap(
       name: 'Zigzag',
       waypoints: waypoints,
       towerSlots: slots,
-      treePositions: _forest(waypoints: waypoints, slots: slots, seed: 22),
-      rockPositions: const <(double, double, double)>[
-        (130, 50, 1.0),
-        (370, 50, 1.15),
-        (350, 280, 0.9),
-        (130, 460, 1.0),
-        (380, 660, 0.95),
-        (110, 660, 1.1),
-      ],
+      treePositions: _forest(waypoints: waypoints, slots: slots, rocks: rocks, seed: 22),
+      rockPositions: rocks,
     );
   }
 
@@ -213,19 +224,20 @@ class PathData {
       Vector2(20, 770),
       Vector2(460, 770),
     ];
+    const rocks = <(double, double, double)>[
+      (160, 60, 1.0),
+      (340, 60, 1.1),
+      (240, 350, 1.15),
+      (160, 470, 0.9),
+      (340, 470, 1.0),
+      (240, 770, 0.95),
+    ];
     return GameMap(
       name: 'U-Loop',
       waypoints: waypoints,
       towerSlots: slots,
-      treePositions: _forest(waypoints: waypoints, slots: slots, seed: 33),
-      rockPositions: const <(double, double, double)>[
-        (160, 60, 1.0),
-        (340, 60, 1.1),
-        (240, 350, 1.15),
-        (160, 470, 0.9),
-        (340, 470, 1.0),
-        (240, 770, 0.95),
-      ],
+      treePositions: _forest(waypoints: waypoints, slots: slots, rocks: rocks, seed: 33),
+      rockPositions: rocks,
     );
   }
 
