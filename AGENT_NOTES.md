@@ -192,3 +192,53 @@ Kalan öneriler:
 - 1.5x speed toggle şu an child component update'lerini hızlandırıyor; spawn
   timer normal `dt` ile azalıyor. Tam simülasyon hızı istenirse spawn timer da
   speed multiplier ile çalışacak şekilde revize edilebilir.
+
+### 2026-04-29 — Claude oturumu 2: spawn-timer fix + dense forest + clearables
+
+İki ardışık iş `main`'e fast-forward merge edildi ve push edildi.
+
+1. **`5ec7d5a fix: scale spawn timer with game speed multiplier`**
+   - Codex'in raporladığı tutarsızlık kapatıldı. `td_game.dart` `update()`:
+     `_spawnTimer -= dt;` → `_spawnTimer -= dt * _gameSpeed;`
+   - Artık 1.5x modunda hem düşman hareketi hem spawn aralığı tutarlı.
+
+2. **`349cf2b feat: dense forest + tappable trees/rocks open new slots`**
+   - `path_data.dart` artık programatik forest generator kullanıyor:
+     grid + jitter, path/slot çakışmasını filtreliyor. Step 26→20,
+     pathClearance 30, slotClearance 50. Her haritada ~700-800 ağaç
+     (önceki ~250'den).
+   - `TreeComponent` ve `RockComponent` artık `TapCallbacks` taşıyor,
+     `onTap` callback constructor'da set ediliyor (TdGame import'u
+     yapmamak için — döngüsel import'tan kaçındık).
+   - `TdGame._handleTreeTap` (15 gold) ve `_handleRockTap` (35 gold):
+     gold düş → `ParticleEffect` → `removeFromParent()` → aynı pozisyonda
+     yeni `TowerSlot` add. Tree bottomCenter anchor olduğu için slot
+     pozisyonu `y - size.y/2` ile center'a kaydırılıyor.
+   - `_clearMap` zaten `TreeComponent`/`RockComponent`/`TowerSlot`
+     temizliyor, yeni eklenen runtime slotlar da map değişiminde gider.
+
+**Doğrulama:** `flutter analyze` temiz (her iki commit için). Lokal
+`flutter run` testi kullanıcı tarafında.
+
+### Codex'e öneriler / dikkat edilecekler
+
+- **Tree tap z-order:** TowerSlot, TreeComponent ve TowerComponent default
+  priority 0; Tree priority -5 olduğu için slot/tower üstte kalır → tap
+  onlara önce gider. Yeni komponent eklerken priority kuralına dikkat et
+  (path -10, tree/rock -5, default 0, projectile 5, enemy 5).
+- **Forest density performans:** her haritada ~750 `TreeComponent`. Şu an
+  smooth ama daha fazla efekt eklenirse FPS izlenmeli. Olası optimizasyon:
+  ağaçları statik bir `Picture`/`Sprite`'a bake'lemek (priority -5 katmanını
+  tek render'a indirmek). Şimdilik gerek yok, not olarak duruyor.
+- **Slot çakışma riski:** generator slotClearance 50, ama iki yakın ağaç
+  birden temizlenirse iki yeni slot 20-30px arayla doğabilir → 48px slot
+  kareleri görsel olarak çakışır. Gameplay etkisi minimal (her ikisine de
+  tower konabilir), ama kullanıcı şikâyet ederse `_handleTreeTap` içinde
+  yeni slot'tan önce mevcut slotlara mesafe kontrolü ekleyebilirsin.
+- **Tap ekonomisi:** ağaç 15g / kaya 35g — tower base cost'lar ile
+  uyumlu (en ucuz tower archer 50g civarı sanırım). Yeni slot açma
+  ekonomisi balance test gerekiyor; çok ucuzsa map dolar, çok pahalıysa
+  feature kullanılmaz.
+- **Açık öneri:** ağaç temizleme şu an "tek tap → anında temizlik". Yanlış
+  tap'ları engellemek için confirm step (long-press veya iki tap) eklenmesi
+  düşünülebilir. Şu an deneyim için kullanıcı bilinçli tercih etti.
