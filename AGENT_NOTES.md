@@ -251,3 +251,128 @@ Kalan öneriler:
 - Ağaç scale'i sabitlendi (`1.0`), böylece temizlenebilir alan ve görsel
   ölçü slotlarla daha tutarlı duruyor.
 - Path clearance 36px, slot clearance 48px olarak güncellendi.
+
+### 2026-04-29 — Claude oturumu 4: damageable obstacles tamamlandı
+
+Branch `claude/damageable-obstacles` — 1 commit: `fd58844`
+
+- `_fire(EnemyComponent)` → `_fire(Damageable)` düzeltildi. Obstacle path: singleTarget/splash için `ProjectileComponent`, diğer tipler için instant `takeDamage + _spawnHit`.
+- `td_game.dart` tap sistemi (`_handleTreeTap`, `_handleRockTap`) kaldırıldı; cluster sistemi eklendi:
+  - `_ObstacleCluster` (center + remaining Set)
+  - `_buildMap`: her grid center'da 4-ağaç cluster (offsets ±10/±6px), kayalar tek elemanlı cluster. `onDestroyed` → `_onObstacleDestroyed`.
+  - `_onObstacleDestroyed`: cluster'dan çıkar; empty olunca `TowerSlot` + particle ekle.
+  - `_clearMap`: `_clusters.clear()` + `_nextClusterId = 0`.
+- `enemy_component`: `@override` eksiklikleri giderildi.
+- `withOpacity` → `withValues(alpha:)` (deprecation).
+- `flutter analyze` temiz (no issues).
+
+**Doğrulama (lokal flutter run gerekli):**
+- Tower koy, wave öncesi menzilinde ağaç olsun → ~5 mermide (24 HP ÷ damage) ağaç düşmeli.
+- Cluster içi 4 ağaç da düşünce center'a TowerSlot açılmalı.
+- Düşman gelince tower ağacı bırakıp düşmanı hedeflemeli.
+- Rock: tek başına yıkılınca da slot açılmalı.
+
+### Sıradaki öneriler
+- Ses (flame_audio — atış/ölüm/wave-clear SFX)
+- Frost/Flame/Tesla için görsel projectile efektleri
+- Run sonu detaylı istatistik
+- Meta progression (rune/fragment sistemi)
+
+### 2026-04-29 — Claude oturumu 3: damageable obstacles (TAMAMLANDI — bkz. oturum 4)
+
+**Hedef tasarım** (kullanıcı isteği):
+1. Codex'in hizalı grid'i korunsun ama her grid hücresinde **4'lü ağaç
+   cluster'ı** olsun → forest yoğunluğu geri gelsin.
+2. Ağaç ve kayalar tap ile değil, **menzilindeki en yakın tower'ın
+   saldırısıyla** yıkılsın.
+3. Birden fazla mermi gerektirsin (HP sistemi).
+4. Cluster içindeki tüm ağaçlar yıkılınca o hücrede **yeni TowerSlot**
+   açılsın. Kayalar tek başına bir cluster, yıkılınca da slot açılsın.
+
+**Yapılan refactor (uncommitted, working tree dirty)**:
+
+1. **YENİ** `lib/game/components/damageable.dart` — abstract class:
+   ```dart
+   abstract class Damageable {
+     bool get isMounted; bool get isAlive;
+     Vector2 get worldPosition; void takeDamage(double amount);
+   }
+   ```
+
+2. `tree_component.dart` — TapCallbacks **kaldırıldı**. `implements
+   Damageable`. `double maxHp = 24` (default), `_hp`, `takeDamage`,
+   `_hitFlash` görsel beyaz parıltı. Yeni alan `int clusterId`,
+   `void Function(TreeComponent)? onDestroyed` callback. HP 0'da
+   `onDestroyed` çağrılır + `removeFromParent()`.
+
+3. `rock_component.dart` — aynı pattern, `maxHp = 70`, `clusterId`,
+   `onDestroyed`. TapCallbacks kaldırıldı.
+
+4. `enemy_component.dart` — sadece `implements Damageable` eklendi.
+   Mevcut isAlive/worldPosition/takeDamage zaten uyumlu.
+
+5. `projectile_component.dart` — `target` tipi `EnemyComponent` →
+   `Damageable`. Splash döngüsü `whereType<EnemyComponent>()` →
+   `whereType<Damageable>()`. `identical()` ile self-skip.
+
+6. `tower_component.dart` — `_currentTarget` tipi `Damageable?`.
+   `_acquireTarget`: önce düşmanları targeting mode ile seçer; düşman
+   yoksa menzildeki en yakın non-enemy Damageable'ı döndürür. Import
+   eklendi.
+
+**KALAN İŞLER (yeni oturumda devam):**
+
+A. `tower_component.dart` `_fire(EnemyComponent target)` hâlâ
+   EnemyComponent parametresi alıyor — **derleme hatası verir**, henüz
+   yapılmadı. Yapılacak:
+   - İmza `_fire(Damageable target)`.
+   - İçinde `if (target is EnemyComponent) { ... mevcut switch ... } else
+     { /* obstacle path */ }`.
+   - Obstacle path: singleTarget/splash için `ProjectileComponent` ile
+     uçur (target Damageable kabul ediyor); diğer tipler (slow/dot/chain)
+     için instant `target.takeDamage(currentDamage)` + `_spawnHit`.
+   - `_aimAngle()` içinde `_currentTarget!.worldPosition` Damageable'da
+     mevcut, sorun olmaz. Sadece `EnemyComponent`'a özel referans varsa
+     güncelle (muzzle dir, render).
+   - `render`'daki `_currentTarget!.worldPosition - position` zaten
+     Damageable üstünden çalışır — ama `_muzzleFlash` blockunda
+     `_currentTarget!.worldPosition` çağrısı kontrol edilmeli.
+
+B. `td_game.dart` cluster sistemi:
+   - State: `final Map<int, _ObstacleCluster> _clusters = {};` ve
+     `int _nextClusterId = 0;` (private class _ObstacleCluster: center
+     Vector2, remaining: Set<PositionComponent>).
+   - `_buildMap` içinde:
+     - Tree positions artık her merkez için **4 ağaç** üretsin (offsets
+       ör. `(-10,-6), (10,-6), (-6,8), (8,8)` `Vector2`'lar). Hepsine
+       aynı `clusterId`, callback `_onObstacleDestroyed`. Cluster center
+       grid noktasının kendisi.
+     - Rock için her kaya tek elemanlı cluster, callback `_onObstacleDestroyed`.
+   - `_onObstacleDestroyed(PositionComponent obstacle)`:
+     - `clusterId` üzerinden cluster'ı bul, remaining setinden çıkar.
+     - Empty olduysa `add(TowerSlot(worldPosition: cluster.center,
+       onTap: _handleSlotTap))` + `ParticleEffect`.
+     - Cluster'ı map'ten sil.
+   - `_handleTreeTap` ve `_handleRockTap` **silinecek** (artık tap yok).
+     Tree/Rock constructor'larından `onTap` parametresi kalktı zaten.
+
+C. `path_data.dart` değişmesin — forest generator hizalı grid center
+   listesi döndürmeye devam ediyor. Cluster spawn'ı td_game tarafında.
+
+D. Doğrulama: `flutter analyze` temiz olmalı, lokal `flutter run` ile
+   test:
+   - 1. wave öncesi tower koy, menzilinde ağaç olsun → ateş etmeli, ~5
+     mermide (24/5 ≈ 5 hit) ağaç düşmeli.
+   - Bir cluster'daki 4 ağaç da düşünce yerine slot açılmalı.
+   - Düşman gelince tower ağacı bırakıp düşmanı vurmalı.
+
+**Branch öneri**: Çalışmayı `claude/damageable-obstacles` branch'inde
+toparla. Şu an `main` üzerindeyiz, working tree dirty.
+
+**Açık tasarım kararları (yeni oturumda netleşecek)**:
+- Tree maxHp 24, Rock maxHp 70 — ilk tahmin, balance test gerekiyor.
+- Cluster içi ağaç pozisyonları sabit offsets mı yoksa seed bazlı jitter
+  mı? Şu an plan: sabit offsetler (deterministik).
+- Tower obstacle vururken slow/dot/chain skip — obstacle'a sadece direct
+  damage. Frost ağaçı yavaşlatmaz, mantıklı.
+- Cluster yıkıldıktan sonra particle rengi: yeşil (ağaç) / gri (kaya).
