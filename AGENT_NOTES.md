@@ -76,15 +76,11 @@ Branch'ler `origin`'e push edildi, PR açma kararı kullanıcıya bırakıldı.
   ileride kartlar upgrade perk, geçici buff veya run modifier seçimine
   evrilebilir.
 
-- [ ] **Projectile sistemi** — şu an instant hit. Archer ok atarken
-      görünür mermi, cannon top, tesla zincir bolt animasyonu eklenebilir.
-- [ ] **Tower satış / yer değiştirme** — slot'a yanlış tower koyunca
-      geri dönüş yok. Upgrade panel'e SELL butonu (cost'un %60'ı geri).
-- [ ] **Wave preview** — sıradaki wave'in compozisyonu HUD'da küçük ikon
-      olarak gösterilsin; oyuncu hazırlık yapsın.
-- [ ] **Targeting mode UI** — TargetingMode enum'u var (first/strongest/
-      weakest/closest) ama UI'dan değiştirilemiyor. Upgrade panel'e
-      targeting toggle eklenebilir.
+- [x] **Projectile sistemi** — Archer ok, Cannon top projectile kullanıyor.
+- [x] **Tower satış / yer değiştirme** — Upgrade panel'e SELL eklendi.
+- [x] **Wave preview** — HUD sıradaki wave kompozisyonunu gösteriyor.
+- [x] **Targeting mode UI** — Upgrade panel'den first/strongest/weakest/
+      closest seçilebiliyor.
 - [ ] **Ses** — flame_audio paketi pubspec'te yok, eklenip atış/ölüm/
       wave-clear için kısa SFX bağlanabilir.
 - [ ] **Bilinen bug'lar** (eski review notları, hâlâ geçerli):
@@ -144,3 +140,55 @@ Projeye uygun öneriler:
   sağa yaslı, yarı şeffaf kartlardan oluşan overlay.
 - Selector kart yüksekliği artırıldı; Chrome'daki bottom overflow kaldırıldı.
 - Tower slot görselleri daireden kare outline'a çevrildi.
+
+### 2026-04-29 — Claude + Codex main merge
+
+Branch `claude/five-towers-with-rocks`, `main` branch'e fast-forward merge
+edildi ve GitHub'a pushlandı. `main` son commit:
+
+- `33dc63c feat: extend U-Loop path down + denser foliage`
+
+Bu merge ile `main` içine giren ana işler:
+
+- Tower seti 5 archetype'a indirildi: Archer, Cannon, Frost, Flame, Tesla.
+- Tüm tower'lar run başında açık; wave sonu seçimleri tower training/perk
+  kararına dönüştü.
+- Her tower için level bazlı özel silüet/model çizimi eklendi.
+- Dekoratif `RockComponent` eklendi; haritalara taş ve daha yoğun foliage
+  yerleşimleri yapıldı.
+- Tower slot görselleri kare outline'a çevrildi.
+- `TargetingMode.first`, ekran `y` koordinatı yerine gerçek waypoint
+  ilerlemesini kullanıyor.
+- Archer ve Cannon için `ProjectileComponent` eklendi; instant-hit hissi
+  azaltıldı.
+- Upgrade paneline targeting mode toggle eklendi: FIRST, STRONG, WEAK, CLOSE.
+- Upgrade paneline SELL eklendi; yatırımın %60'ı geri veriliyor ve slot
+  tekrar kullanılabilir oluyor.
+- HUD'a NEXT wave preview eklendi.
+- 1.5x speed toggle eklendi.
+- Difficulty scaling eklendi: wave ilerledikçe enemy HP/speed ve spawn
+  temposu artıyor.
+- Modifier seçimi ve wave sonu seçimlerinden sonra 2 saniyelik bekleme
+  kaldırıldı; akış daha hızlı başlıyor.
+- U-Loop path aşağı uzatıldı, ağaç/kaya dağılımı yoğunlaştırıldı.
+- Bottom selector tekrar oyun Stack'i dışındaki bottom bar'a taşındı; düşman
+  overlap sorunu azaltıldı.
+
+Doğrulama:
+
+- `flutter analyze` temiz.
+- `flutter build web` başarılı. Sadece Flutter font/icon uyarısı verdi:
+  MaterialIcons bulundu, CupertinoIcons bulunamadı. Build'i engellemedi.
+
+Kalan öneriler:
+
+- Flame audio ile atış/ölüm/wave-clear SFX.
+- Projectile sistemini Frost, Flame ve Tesla için de görsel efektlerle
+  genişletmek.
+- Run sonu ayrıntılı istatistik: killed, leaked, placed, sold, training picks.
+- Enemy encyclopedia / wave detail panel.
+- Daily seed / challenge mode.
+- Meta progression: rune/fragment sistemi.
+- 1.5x speed toggle şu an child component update'lerini hızlandırıyor; spawn
+  timer normal `dt` ile azalıyor. Tam simülasyon hızı istenirse spawn timer da
+  speed multiplier ile çalışacak şekilde revize edilebilir.
