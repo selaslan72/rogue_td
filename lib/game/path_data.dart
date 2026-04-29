@@ -38,7 +38,7 @@ class PathData {
     double mapW = 480,
     double mapH = 800,
     double step = slotSide,
-    double pathClearance = 36,
+    double pathClearance = 64,
     double slotClearance = slotSide,
     double rockClearance = 32,
   }) {

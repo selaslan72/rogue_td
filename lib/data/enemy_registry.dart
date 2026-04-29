@@ -36,7 +36,7 @@ class EnemyRegistry {
     speed: 25,
     armor: 5,
     goldReward: 12,
-    damageOnLeak: 3,
+    damageOnLeak: 1,
     color: Color(0xFF7C3AED),
   );
 
@@ -60,7 +60,7 @@ class EnemyRegistry {
     speed: 22,
     armor: 8,
     goldReward: 80,
-    damageOnLeak: 5,
+    damageOnLeak: 1,
     color: Color(0xFF9333EA),
     sizeScale: 1.6,
   );
@@ -73,7 +73,7 @@ class EnemyRegistry {
     speed: 18,
     armor: 12,
     goldReward: 250,
-    damageOnLeak: 20,
+    damageOnLeak: 1,
     color: Color(0xFF7F1D1D),
     sizeScale: 2.0,
   );

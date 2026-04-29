@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +11,6 @@ import '../models/run_modifier.dart';
 import '../models/run_result.dart';
 import '../models/run_stats.dart';
 import '../models/tower_card.dart';
-import 'card_pool.dart';
 import 'components/castle_component.dart';
 import 'components/damageable.dart';
 import 'components/enemy_component.dart';
@@ -27,7 +28,7 @@ import 'path_data.dart';
 class TdGame extends FlameGame with HasGameReference {
   // ─── Run state ─────────────────────────────────────────────────────────────
   static const int maxWaves = 15;
-  static const int initialLives = 20;
+  static const int initialLives = 10;
   static const int initialGold = 200;
 
   int lives = initialLives;
@@ -63,10 +64,9 @@ class TdGame extends FlameGame with HasGameReference {
     null,
   );
 
-  // Wave sonu kart seçimi
-  final ValueNotifier<List<TowerCard>?> cardSelectNotifier = ValueNotifier(
-    null,
-  );
+  // Wave sonu ücretsiz upgrade seçimi
+  final ValueNotifier<List<TowerComponent>?> upgradePickNotifier =
+      ValueNotifier(null);
 
   // Run başı modifier seçimi (3 RunModifier)
   final ValueNotifier<List<RunModifier>?> modifierSelectNotifier =
@@ -75,7 +75,9 @@ class TdGame extends FlameGame with HasGameReference {
   // Run sonu sonuç overlay'i
   final ValueNotifier<RunResult?> runResultNotifier = ValueNotifier(null);
 
-  late CardPool cardPool;
+  // Yerleştirme fazı — modifier seçildikten sonra, wave başlamadan önce
+  final ValueNotifier<bool> placementPhaseNotifier = ValueNotifier(false);
+
 
   // Obstacle cluster state
   final Map<int, _ObstacleCluster> _clusters = {};
@@ -107,7 +109,6 @@ class TdGame extends FlameGame with HasGameReference {
   Future<void> onLoad() async {
     super.onLoad();
     camera.viewfinder.visibleGameSize = Vector2(480, 800);
-    cardPool = CardPool(TowerRegistry.all);
     _buildMap(PathData.random());
     _updateWavePreview();
     // İlk run modifier seçimi — overlay açılır, oyuncu bir modifier seçer
@@ -116,12 +117,7 @@ class TdGame extends FlameGame with HasGameReference {
 
   // ─── Harita kurulumu ──────────────────────────────────────────────────────
 
-  static const _treeOffsets = [
-    (-10.0, -6.0),
-    (10.0, -6.0),
-    (-6.0, 8.0),
-    (8.0, 8.0),
-  ];
+  static final _forestRng = math.Random();
 
   void _buildMap(GameMap map) {
     currentMap = map;
@@ -135,19 +131,20 @@ class TdGame extends FlameGame with HasGameReference {
     for (final (cx, cy, _) in map.treePositions) {
       final id = _nextClusterId++;
       final center = Vector2(cx, cy);
-      final remaining = <PositionComponent>{};
-      for (final (dx, dy) in _treeOffsets) {
-        final tree = TreeComponent(
-          worldPosition: Vector2(cx + dx, cy + dy),
-          sizeScale: 1.0,
-          clusterId: id,
-          onDestroyed: (t) => _onObstacleDestroyed(t, t.clusterId),
-          onTap: _handleTreeTap,
-        );
-        remaining.add(tree);
-        add(tree);
-      }
-      _clusters[id] = _ObstacleCluster(center: center, remaining: remaining);
+      // %30 çalı, %70 güçlü ağaç
+      final variant = _forestRng.nextDouble() < 0.30
+          ? TreeVariant.bush
+          : TreeVariant.tree;
+      final tree = TreeComponent(
+        worldPosition: center.clone(),
+        sizeScale: 1.0,
+        variant: variant,
+        clusterId: id,
+        onDestroyed: (t) => _onObstacleDestroyed(t, t.clusterId),
+        onTap: _handleTreeTap,
+      );
+      _clusters[id] = _ObstacleCluster(center: center, remaining: {tree});
+      add(tree);
     }
 
     int rockSeed = 0;
@@ -203,19 +200,29 @@ class TdGame extends FlameGame with HasGameReference {
     cluster.remaining.remove(obstacle);
     if (cluster.remaining.isEmpty) {
       _clusters.remove(clusterId);
+      final isBush =
+          obstacle is TreeComponent && obstacle.variant == TreeVariant.bush;
+      final particleColor = obstacle is RockComponent
+          ? const Color(0xFFB7BFCB)
+          : isBush
+              ? const Color(0xFF48902E)
+              : const Color(0xFF4A8A3A);
       add(
         ParticleEffect(
           worldPosition: cluster.center.clone(),
-          color: obstacle is RockComponent
-              ? const Color(0xFFB7BFCB)
-              : const Color(0xFF4A8A3A),
+          color: particleColor,
           duration: 0.4,
-          maxRadius: 18,
+          maxRadius: isBush ? 12 : 18,
         ),
       );
-      add(
-        TowerSlot(worldPosition: cluster.center.clone(), onTap: _handleSlotTap),
-      );
+      if (isBush) {
+        // Çalı → slot yok, küçük altın ödülü
+        gold += 8;
+        goldNotifier.value = gold;
+      } else {
+        add(TowerSlot(
+            worldPosition: cluster.center.clone(), onTap: _handleSlotTap));
+      }
     }
   }
 
@@ -391,7 +398,7 @@ class TdGame extends FlameGame with HasGameReference {
       result.addAll(List.filled(w == 10 ? 4 : 2, EnemyRegistry.tank));
       return result;
     }
-    final base = 8 + w * 2;
+    final base = ((8 + w * 2) * stats.enemyCountMul).round();
     for (int i = 0; i < base; i++) {
       EnemyDef pick;
       if (w >= 7 && i % 4 == 0) {
@@ -442,7 +449,7 @@ class TdGame extends FlameGame with HasGameReference {
         if (wave >= maxWaves) {
           _endRun(victory: true);
         } else {
-          _showCardSelection();
+          _showWaveReward();
         }
       }
     }
@@ -462,6 +469,7 @@ class TdGame extends FlameGame with HasGameReference {
         onLeaked: _onEnemyLeaked,
         hpMultiplier: stats.enemyHpMul * waveHpScale,
         speedMultiplier: stats.enemySpeedMul * waveSpeedScale,
+        armorBonus: stats.enemyArmorBonus,
       ),
     );
     waveEnemiesRemaining = _waveQueue.length;
@@ -482,27 +490,27 @@ class TdGame extends FlameGame with HasGameReference {
     }
   }
 
-  // ─── Kart seçim akışı (wave sonu) ─────────────────────────────────────────
+  // ─── Wave sonu ücretsiz upgrade seçimi ────────────────────────────────────
 
-  void _showCardSelection() {
-    final offered = cardPool.drawThree();
-    for (final c in offered) {
-      cardPool.onOffered(c);
+  void _showWaveReward() {
+    final upgradeable = children
+        .whereType<TowerComponent>()
+        .where((t) => t.canUpgrade)
+        .toList();
+    if (upgradeable.isEmpty) {
+      if (!runEnded && lives > 0) startNextWave();
+      return;
     }
-    cardSelectNotifier.value = offered;
+    upgradePickNotifier.value = upgradeable;
     pauseEngine();
   }
 
-  void pickCard(TowerCard card) {
-    stats.trainTower(card.id);
-    gold += 15;
-    goldNotifier.value = gold;
-    _flashMessage(
-      '${card.name} training Lv.${stats.towerTrainingLevel(card.id)}',
-    );
-    cardPool.onPicked(card);
-    cardPool.recoverWeights();
-    cardSelectNotifier.value = null;
+  void pickTowerUpgrade(TowerComponent? tower) {
+    if (tower != null && tower.isMounted && tower.canUpgrade) {
+      tower.upgrade();
+      _flashMessage('${tower.card.name} → Lv.${tower.level}');
+    }
+    upgradePickNotifier.value = null;
     resumeEngine();
     if (!runEnded && lives > 0) startNextWave();
   }
@@ -527,13 +535,15 @@ class TdGame extends FlameGame with HasGameReference {
       gold = initialGold + mod.value.round();
       goldNotifier.value = gold;
     }
-    if (mod.kind == ModifierKind.extraLives) {
-      lives = initialLives + mod.value.round();
-      livesNotifier.value = lives;
-    }
 
     modifierSelectNotifier.value = null;
     resumeEngine();
+    placementPhaseNotifier.value = true;
+  }
+
+  /// Oyuncu tower kurumunu bitirip START'a bastığında çağrılır.
+  void startFirstWave() {
+    placementPhaseNotifier.value = false;
     startNextWave();
   }
 
@@ -578,6 +588,8 @@ class TdGame extends FlameGame with HasGameReference {
     messageNotifier.value = null;
     wavePreviewNotifier.value = [];
     runResultNotifier.value = null;
+    upgradePickNotifier.value = null;
+    placementPhaseNotifier.value = false;
 
     activeModifier = null;
     stats.reset();
@@ -588,8 +600,6 @@ class TdGame extends FlameGame with HasGameReference {
     selectedTower = TowerRegistry.archer;
     selectedTowerNotifier.value = TowerRegistry.archer;
     selectedExistingTowerNotifier.value = null;
-
-    cardPool = CardPool(TowerRegistry.all);
 
     _clearMap();
     _buildMap(PathData.random());

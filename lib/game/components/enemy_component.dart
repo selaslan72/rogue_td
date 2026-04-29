@@ -34,6 +34,7 @@ class EnemyComponent extends PositionComponent implements Damageable {
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
 
+  final double _armorBonus;
   late final Paint _bodyPaint;
   late final Paint _helmetPaint;
 
@@ -44,8 +45,10 @@ class EnemyComponent extends PositionComponent implements Damageable {
     required this.onLeaked,
     double hpMultiplier = 1.0,
     double speedMultiplier = 1.0,
+    double armorBonus = 0,
   }) : _hpMul = hpMultiplier,
        _speedMul = speedMultiplier,
+       _armorBonus = armorBonus,
        super(
          position: waypoints.first.clone(),
          size: Vector2.all(20 * def.sizeScale),
@@ -81,7 +84,7 @@ class EnemyComponent extends PositionComponent implements Damageable {
   @override
   void takeDamage(double amount) {
     if (!isAlive) return;
-    final effective = (amount - def.armor).clamp(0.0, double.infinity);
+    final effective = (amount - def.armor - _armorBonus).clamp(0.0, double.infinity);
     _hp -= effective;
     if (_hp <= 0) {
       _hp = 0;

@@ -287,9 +287,69 @@ Branch `claude/damageable-obstacles` — 1 commit: `fd58844`
 
 ### Sıradaki öneriler
 - Ses (flame_audio — atış/ölüm/wave-clear SFX)
-- Frost/Flame/Tesla için görsel projectile efektleri
+- ~~Frost/Flame/Tesla için görsel projectile efektleri~~ 2026-04-29 Claude tamamladı
+- ~~Hız butonu sağ üste küçük ikon~~ 2026-04-30 Claude tamamladı
+- ~~4'lü ağaç cluster → tek güçlü ağaç + çalı~~ 2026-04-30 Claude tamamladı
+- ~~Yerleştirme fazı — modifier sonrası START butonuyla wave başlatma~~ 2026-04-30 Claude tamamladı
+- ~~Wave sonu kart seçimi → ücretsiz tower upgrade + altın sistemi~~ 2026-04-30 Claude tamamladı
+- ~~Düşman taraflı modifier genişletmesi~~ 2026-04-30 Claude tamamladı
 - Run sonu detaylı istatistik
 - Meta progression (rune/fragment sistemi)
+
+### 2026-04-30 — Claude oturumu 6: çok sayıda iyileştirme
+
+#### Görsel / UX
+
+- **Frost/Flame/Tesla projectile efektleri** (`projectile_component.dart`, `tower_component.dart`, `lightning_arc.dart`):
+  - `ProjectileVisual.iceShard` — kama kristal, hedefte slow uygular
+  - `ProjectileVisual.fireball` — arka alev izli top, büyük impactRadius
+  - `LightningArc` yeni bileşen — Tesla chain arası 0.15s'lik zikzak yıldırım (3 katman: glow/core/beyaz)
+- **Hız butonu** (`game_screen.dart`): `_BottomBar` kaldırıldı, `Positioned(top:8,right:8)` 40×40 ikon
+- **Upgrade popup konumu** (`game_screen.dart`): `towerX+24` → `towerX - panelW/2` (kule merkezinin hemen üstü)
+
+#### Orman sistemi (`tree_component.dart`, `td_game.dart`, `path_data.dart`)
+
+- `TreeVariant` enum eklendi: `tree` (HP 85, slot açar) / `bush` (HP 22, 8g altın)
+- Her grid hücresi tek engel (4'lü cluster kaldırıldı)
+- `pathClearance` 36 → 64 (slot yola taşma sorunu çözüldü)
+
+#### Oyun akışı (`td_game.dart`, `game_screen.dart`)
+
+- **Yerleştirme fazı**: modifier seçimi sonrası wave başlamaz; `placementPhaseNotifier` ile `_PlacementOverlay` + "BAŞLAT" butonu
+- **Kuleler placement'ta ateş etmez**: `tower_component.dart` update'te `placementPhaseNotifier` kontrolü
+- **Wave sonu ücretsiz upgrade**: `CardPool`/training sistemi kaldırıldı; yerleştirilen kulelerden biri ücretsiz +1 level; hiç kule yoksa/hepsi max ise atlama
+- **Can sistemi**: `initialLives` 20 → 10; tüm `damageOnLeak` 1; Fortified modifier kaldırıldı; `extraLives` kodu temizlendi
+
+#### Modifier sistemi (`run_modifier.dart`, `run_stats.dart`, `modifier_registry.dart`, `enemy_component.dart`)
+
+4 yeni düşman güçlendirme modifier'ı eklendi (toplam 11 modifier, her run 3 rastgele):
+- 💪 **Titan** — +%50 düşman HP (`enemyHpBoost`)
+- 💨 **Berserk** — +%35 düşman hızı (`enemySpeedBoost`)
+- 🔩 **Ironclad** — tüm düşmanlara +6 flat zırh (`enemyArmorBoost`, `EnemyComponent.armorBonus` parametresi)
+- 👹 **Horde** — wave başına +%40 düşman sayısı (`enemyCountBoost`, `_buildWaveList` base count çarpanı)
+
+**Doğrulama:** `flutter analyze` temiz (tüm değişiklikler için).
+
+### 2026-04-29 — Claude oturumu 5: Frost/Flame/Tesla görsel efektler
+
+- `ProjectileVisual` enum'a `iceShard` ve `fireball` eklendi.
+- `ProjectileComponent` → `slowAmount`, `slowDuration`, `impactRadius` parametreleri eklendi.
+  İmpact'te `EnemyComponent` ise `applySlow` çağrılıyor.
+- Yeni `lightning_arc.dart`: tower'dan hedefe + zincir atlamaları arasında
+  kısa ömürlü (0.15s) zikzak yıldırım yayı. 3 katmanlı çizim: glow / core / beyaz merkez.
+- `tower_component.dart`:
+  - Frost (`TowerType.slow`) artık `ProjectileVisual.iceShard` mermi fırlatıyor
+    (hız 270, impactRadius 14); hasar + slow impactta uygulanıyor.
+  - Flame (`TowerType.damageOverTime`) artık `ProjectileVisual.fireball` fırlatıyor
+    (hız 210, impactRadius 16; arka alev izi + parıltılı top).
+  - Tesla (`TowerType.chain`) instant damage korundu + her segment için
+    `LightningArc` spawn ediliyor (tower→primary, primary→chain1, chain1→chain2).
+- `flutter analyze` temiz (no issues).
+
+**Doğrulama (lokal flutter run):**
+- Frost: kıyan mavi kama hedefe doğru uçmalı; çarpınca düşman yavaşlamalı.
+- Flame: turuncu top + arka izi görünmeli; impactta büyük parçacık efekti.
+- Tesla: atışta tower'dan düşmana şimşek yayı; chain varsa ek yay(lar) görünmeli.
 
 ### 2026-04-29 — Claude oturumu 3: damageable obstacles (TAMAMLANDI — bkz. oturum 4)
 

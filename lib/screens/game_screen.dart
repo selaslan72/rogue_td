@@ -41,13 +41,18 @@ class _GameScreenState extends State<GameScreen> {
                   GameWidget(game: _game),
                   Positioned.fill(child: _SlotTowerPickerOverlay(game: _game)),
                   Positioned.fill(child: _UpgradeOverlay(game: _game)),
-                  Positioned.fill(child: _CardSelectOverlay(game: _game)),
+                  Positioned.fill(child: _WaveRewardOverlay(game: _game)),
                   Positioned.fill(child: _ModifierSelectOverlay(game: _game)),
                   Positioned.fill(child: _RunResultOverlay(game: _game)),
+                  Positioned.fill(child: _PlacementOverlay(game: _game)),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: _SpeedButton(game: _game),
+                  ),
                 ],
               ),
             ),
-            _BottomBar(game: _game),
           ],
         ),
       ),
@@ -55,25 +60,6 @@ class _GameScreenState extends State<GameScreen> {
   }
 }
 
-class _BottomBar extends StatelessWidget {
-  final TdGame game;
-  const _BottomBar({required this.game});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFF0A0A14),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          _SpeedButton(game: game),
-          const Spacer(),
-        ],
-      ),
-    );
-  }
-}
 
 class _SlotTowerPickerOverlay extends StatelessWidget {
   final TdGame game;
@@ -313,11 +299,11 @@ class _UpgradeOverlay extends StatelessWidget {
               final scaleY = constraints.maxHeight / _worldH;
               final towerX = tower.position.x * scaleX;
               final towerY = tower.position.y * scaleY;
-              final left = (towerX + 24).clamp(
+              final left = (towerX - _panelW / 2).clamp(
                 8.0,
                 constraints.maxWidth - _panelW - 8.0,
               );
-              final top = (towerY - _panelH - 18).clamp(
+              final top = (towerY - _panelH - 28).clamp(
                 8.0,
                 constraints.maxHeight - _panelH - 8.0,
               );
@@ -551,19 +537,19 @@ class _SellButton extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Kart Seçim Overlay'i — wave temizlenince oyun duraklar, 3 kart sunulur.
+// Wave Reward Overlay — wave temizlenince ücretsiz upgrade seç.
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _CardSelectOverlay extends StatelessWidget {
+class _WaveRewardOverlay extends StatelessWidget {
   final TdGame game;
-  const _CardSelectOverlay({required this.game});
+  const _WaveRewardOverlay({required this.game});
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<List<TowerCard>?>(
-      valueListenable: game.cardSelectNotifier,
-      builder: (_, cards, _) {
-        if (cards == null) return const SizedBox.shrink();
+    return ValueListenableBuilder<List<TowerComponent>?>(
+      valueListenable: game.upgradePickNotifier,
+      builder: (_, towers, _) {
+        if (towers == null) return const SizedBox.shrink();
         return Container(
           color: const Color(0xCC000000),
           child: Center(
@@ -572,22 +558,39 @@ class _CardSelectOverlay extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'WAVE ${game.wave} CLEARED',
-                    style: const TextStyle(
-                      color: Color(0xFFFBBF24),
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
+                  ValueListenableBuilder<int>(
+                    valueListenable: game.waveNotifier,
+                    builder: (_, wave, _) => Text(
+                      'WAVE $wave CLEARED',
+                      style: const TextStyle(
+                        color: Color(0xFFFBBF24),
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 2,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Train a Tower',
+                    'Bir kuleyi ücretsiz upgrade et',
                     style: TextStyle(color: Colors.white54, fontSize: 13),
                   ),
                   const SizedBox(height: 20),
-                  ...cards.map((card) => _CardOption(game: game, card: card)),
+                  ...towers.map(
+                    (t) => _TowerUpgradeOption(game: game, tower: t),
+                  ),
+                  const SizedBox(height: 4),
+                  TextButton(
+                    onPressed: () => game.pickTowerUpgrade(null),
+                    child: const Text(
+                      'ATLA',
+                      style: TextStyle(
+                        color: Colors.white38,
+                        fontSize: 12,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -598,30 +601,18 @@ class _CardSelectOverlay extends StatelessWidget {
   }
 }
 
-class _CardOption extends StatelessWidget {
+class _TowerUpgradeOption extends StatelessWidget {
   final TdGame game;
-  final TowerCard card;
-  const _CardOption({required this.game, required this.card});
-
-  static const _rarityLabel = {
-    TowerRarity.common: 'COMMON',
-    TowerRarity.rare: 'RARE',
-    TowerRarity.legendary: 'LEGENDARY',
-  };
-
-  static const _rarityColor = {
-    TowerRarity.common: Color(0xFFAAAAAA),
-    TowerRarity.rare: Color(0xFF60A5FA),
-    TowerRarity.legendary: Color(0xFFFBBF24),
-  };
+  final TowerComponent tower;
+  const _TowerUpgradeOption({required this.game, required this.tower});
 
   @override
   Widget build(BuildContext context) {
-    final trainingLevel = game.stats.towerTrainingLevel(card.id);
+    final card = tower.card;
     return GestureDetector(
-      onTap: () => game.pickCard(card),
+      onTap: () => game.pickTowerUpgrade(tower),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: const Color(0xFF1A1A2E),
@@ -630,71 +621,48 @@ class _CardOption extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Text(card.icon, style: const TextStyle(fontSize: 32)),
+            Text(card.icon, style: const TextStyle(fontSize: 28)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        card.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _rarityColor[card.rarity]!.withValues(
-                            alpha: 0.15,
-                          ),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          _rarityLabel[card.rarity]!,
-                          style: TextStyle(
-                            color: _rarityColor[card.rarity],
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
                   Text(
-                    '+10% damage, +5% range for every ${card.name}',
-                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                    card.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Lv.${tower.level} → Lv.${tower.level + 1}',
+                    style: TextStyle(
+                      color: card.color,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  'Lv.${trainingLevel + 1}',
-                  style: const TextStyle(
-                    color: Color(0xFFFBBF24),
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: card.color.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: card.color),
+              ),
+              child: const Text(
+                'SEÇ',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                  letterSpacing: 1,
                 ),
-                const Text(
-                  '+15g',
-                  style: TextStyle(color: Colors.white38, fontSize: 10),
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -1034,6 +1002,76 @@ class _RunResultOverlay extends StatelessWidget {
   }
 }
 
+class _PlacementOverlay extends StatelessWidget {
+  final TdGame game;
+  const _PlacementOverlay({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: game.placementPhaseNotifier,
+      builder: (_, isPlacing, _) {
+        if (!isPlacing) return const SizedBox.shrink();
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'Kulelerini kur, hazır olunca başlat',
+                    style: TextStyle(color: Colors.white70, fontSize: 11),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                GestureDetector(
+                  onTap: game.startFirstWave,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 48,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFBBF24),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0xAAFBBF24),
+                          blurRadius: 16,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      '▶  BAŞLAT',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _SpeedButton extends StatelessWidget {
   final TdGame game;
   const _SpeedButton({required this.game});
@@ -1045,25 +1083,24 @@ class _SpeedButton extends StatelessWidget {
       builder: (_, isFast, _) => GestureDetector(
         onTap: game.toggleSpeed,
         child: Container(
-          width: 80,
-          height: 96,
+          width: 40,
+          height: 40,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isFast ? const Color(0x99FBAA24) : const Color(0x661A1A2E),
+            color: isFast
+                ? const Color(0xCCFBBF24)
+                : const Color(0xAA1A1A2E),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isFast ? const Color(0xFFFBBF24) : Colors.white30,
-              width: isFast ? 2 : 1,
+              width: 1.2,
             ),
-            borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
-            isFast ? '⏩\n1.5×' : '▶️\n1×',
-            textAlign: TextAlign.center,
+            isFast ? '⏩' : '▶',
             style: TextStyle(
-              fontSize: 14,
-              height: 1.4,
+              fontSize: 18,
               color: isFast ? Colors.white : Colors.white70,
-              fontWeight: FontWeight.bold,
             ),
           ),
         ),

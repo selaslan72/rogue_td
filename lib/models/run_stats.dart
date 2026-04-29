@@ -9,6 +9,8 @@ class RunStats {
   double goldMul = 1.0;
   double enemyHpMul = 1.0;
   double enemySpeedMul = 1.0;
+  double enemyArmorBonus = 0.0;
+  double enemyCountMul = 1.0;
   final Map<String, int> towerTrainingLevels = {};
 
   void reset() {
@@ -18,6 +20,8 @@ class RunStats {
     goldMul = 1.0;
     enemyHpMul = 1.0;
     enemySpeedMul = 1.0;
+    enemyArmorBonus = 0.0;
+    enemyCountMul = 1.0;
     towerTrainingLevels.clear();
   }
 
@@ -47,9 +51,16 @@ class RunStats {
         enemyHpMul = 1 - mod.value;
       case ModifierKind.enemySpeedReduction:
         enemySpeedMul = 1 - mod.value;
+      case ModifierKind.enemyHpBoost:
+        enemyHpMul = 1 + mod.value;
+      case ModifierKind.enemySpeedBoost:
+        enemySpeedMul = 1 + mod.value;
+      case ModifierKind.enemyArmorBoost:
+        enemyArmorBonus = mod.value;
+      case ModifierKind.enemyCountBoost:
+        enemyCountMul = 1 + mod.value;
       case ModifierKind.startingGold:
       case ModifierKind.extraLives:
-        // Tek seferlik — TdGame.startNewRun içinde uygulanır
         break;
     }
   }

@@ -8,6 +8,7 @@ import '../../models/tower_card.dart';
 import '../td_game.dart';
 import 'damageable.dart';
 import 'enemy_component.dart';
+import 'lightning_arc.dart';
 import 'particle_effect.dart';
 import 'projectile_component.dart';
 import 'tower_slot.dart';
@@ -113,6 +114,9 @@ class TowerComponent extends PositionComponent with TapCallbacks {
 
     if (_cooldown > 0) _cooldown -= dt;
     if (_muzzleFlash > 0) _muzzleFlash -= dt * 4;
+
+    final game = findGame();
+    if (game is TdGame && game.placementPhaseNotifier.value) return;
 
     // Her frame yeniden hedefle: kullanıcı bir engele tıkladığında düşmandan
     // engele anında geçilsin; deselect olunca düşmana dönülsün.
@@ -230,12 +234,27 @@ class TowerComponent extends PositionComponent with TapCallbacks {
           ),
         );
       case TowerType.slow:
-        target.takeDamage(currentDamage);
-        target.applySlow(0.5, 1.5);
-        _spawnHit(target.worldPosition.clone());
+        parent?.add(ProjectileComponent(
+          worldPosition: position.clone(),
+          target: target,
+          damage: currentDamage,
+          color: card.color,
+          visual: ProjectileVisual.iceShard,
+          speed: 270,
+          slowAmount: 0.5,
+          slowDuration: 1.5,
+          impactRadius: 14,
+        ));
       case TowerType.damageOverTime:
-        target.takeDamage(currentDamage);
-        _spawnHit(target.worldPosition.clone());
+        parent?.add(ProjectileComponent(
+          worldPosition: position.clone(),
+          target: target,
+          damage: currentDamage,
+          color: card.color,
+          visual: ProjectileVisual.fireball,
+          speed: 210,
+          impactRadius: 16,
+        ));
       case TowerType.chain:
         // Tesla = 2 zincir, default 2
         final chainCount = card.id == 'lightning' || card.id == 'frost-king'
@@ -243,6 +262,12 @@ class TowerComponent extends PositionComponent with TapCallbacks {
             : 2;
         target.takeDamage(currentDamage);
         _spawnHit(target.worldPosition.clone());
+        parent?.add(LightningArc(
+          from: position.clone(),
+          to: target.worldPosition.clone(),
+          color: card.color,
+          seed: DateTime.now().millisecondsSinceEpoch,
+        ));
         var lastHit = target;
         var dmg = currentDamage * 0.7;
         final hit = <EnemyComponent>{target};
@@ -252,6 +277,12 @@ class TowerComponent extends PositionComponent with TapCallbacks {
           next.takeDamage(dmg);
           if (card.id == 'frost-king') next.applySlow(0.4, 1.2);
           _spawnHit(next.worldPosition.clone());
+          parent?.add(LightningArc(
+            from: lastHit.worldPosition.clone(),
+            to: next.worldPosition.clone(),
+            color: card.color,
+            seed: DateTime.now().millisecondsSinceEpoch + i,
+          ));
           hit.add(next);
           lastHit = next;
           dmg *= 0.7;

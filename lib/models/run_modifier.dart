@@ -10,6 +10,11 @@ enum ModifierKind {
   rangeBoost,          // tüm tower range * (1+X)
   enemyHpReduction,    // düşman HP * (1-X)
   enemySpeedReduction, // düşman speed * (1-X)
+  // — Düşman güçlendirme —
+  enemyHpBoost,        // düşman HP * (1+X)
+  enemySpeedBoost,     // düşman speed * (1+X)
+  enemyArmorBoost,     // düşmanlara +X flat zırh
+  enemyCountBoost,     // wave düşman sayısı * (1+X)
 }
 
 @immutable
