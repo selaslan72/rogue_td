@@ -312,7 +312,7 @@ class TdGame extends FlameGame with HasGameReference {
     if (runEnded) return;
 
     if (waveActive && _waveQueue.isNotEmpty) {
-      _spawnTimer -= dt;
+      _spawnTimer -= dt * _gameSpeed;
       if (_spawnTimer <= 0) {
         _spawnNextEnemy();
         _spawnTimer = _spawnInterval;
