@@ -38,17 +38,6 @@ class _GameScreenState extends State<GameScreen> {
                 fit: StackFit.expand,
                 children: [
                   GameWidget(game: _game),
-                  Positioned(
-                    right: 12,
-                    bottom: 8,
-                    left: 92,
-                    child: _TowerSelector(game: _game),
-                  ),
-                  Positioned(
-                    left: 4,
-                    bottom: 8,
-                    child: _SpeedButton(game: _game),
-                  ),
                   Positioned.fill(child: _UpgradeOverlay(game: _game)),
                   Positioned.fill(child: _CardSelectOverlay(game: _game)),
                   Positioned.fill(child: _ModifierSelectOverlay(game: _game)),
@@ -56,8 +45,30 @@ class _GameScreenState extends State<GameScreen> {
                 ],
               ),
             ),
+            _BottomBar(game: _game),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BottomBar extends StatelessWidget {
+  final TdGame game;
+  const _BottomBar({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF0A0A14),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          _SpeedButton(game: game),
+          const SizedBox(width: 4),
+          Expanded(child: _TowerSelector(game: game)),
+        ],
       ),
     );
   }
@@ -898,7 +909,7 @@ class _SpeedButton extends StatelessWidget {
         onTap: game.toggleSpeed,
         child: Container(
           width: 80,
-          height: 80,
+          height: 92,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: isFast
