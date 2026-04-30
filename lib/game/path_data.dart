@@ -26,6 +26,7 @@ class PathData {
   static const double pathWidth = 40;
   static const double slotRadius = 24;
   static const double slotSide = 48;
+  static const double forestStep = 40;
 
   // ─── Forest generator ─────────────────────────────────────────────────────
 
@@ -37,10 +38,10 @@ class PathData {
     int seed = 1,
     double mapW = 480,
     double mapH = 800,
-    double step = slotSide,
-    double pathClearance = 64,
-    double slotClearance = slotSide,
-    double rockClearance = 32,
+    double step = forestStep,
+    double pathClearance = 58,
+    double slotClearance = 44,
+    double rockClearance = 28,
   }) {
     final result = <(double, double, double)>[];
     final xOffset = 24.0 + (seed % 2) * (step / 2);
@@ -140,9 +141,13 @@ class PathData {
     ];
     const rocks = <(double, double, double)>[
       (90, 100, 1.1),
+      (255, 88, 0.95),
       (380, 100, 0.95),
+      (455, 155, 0.85),
       (200, 410, 1.0),
+      (62, 410, 0.9),
       (380, 580, 1.15),
+      (245, 620, 0.9),
       (90, 770, 0.9),
       (390, 770, 1.05),
     ];
@@ -150,7 +155,12 @@ class PathData {
       name: 'Snake',
       waypoints: waypoints,
       towerSlots: slots,
-      treePositions: _forest(waypoints: waypoints, slots: slots, rocks: rocks, seed: 11),
+      treePositions: _forest(
+        waypoints: waypoints,
+        slots: slots,
+        rocks: rocks,
+        seed: 11,
+      ),
       rockPositions: rocks,
     );
   }
@@ -185,8 +195,12 @@ class PathData {
     const rocks = <(double, double, double)>[
       (130, 50, 1.0),
       (370, 50, 1.15),
+      (240, 135, 0.9),
       (350, 280, 0.9),
+      (120, 285, 0.95),
       (130, 460, 1.0),
+      (365, 455, 1.0),
+      (235, 585, 0.9),
       (380, 660, 0.95),
       (110, 660, 1.1),
     ];
@@ -194,7 +208,12 @@ class PathData {
       name: 'Zigzag',
       waypoints: waypoints,
       towerSlots: slots,
-      treePositions: _forest(waypoints: waypoints, slots: slots, rocks: rocks, seed: 22),
+      treePositions: _forest(
+        waypoints: waypoints,
+        slots: slots,
+        rocks: rocks,
+        seed: 22,
+      ),
       rockPositions: rocks,
     );
   }
@@ -227,16 +246,24 @@ class PathData {
     const rocks = <(double, double, double)>[
       (160, 60, 1.0),
       (340, 60, 1.1),
+      (245, 145, 0.9),
+      (240, 255, 1.0),
       (240, 350, 1.15),
       (160, 470, 0.9),
       (340, 470, 1.0),
+      (240, 590, 0.95),
       (240, 770, 0.95),
     ];
     return GameMap(
       name: 'U-Loop',
       waypoints: waypoints,
       towerSlots: slots,
-      treePositions: _forest(waypoints: waypoints, slots: slots, rocks: rocks, seed: 33),
+      treePositions: _forest(
+        waypoints: waypoints,
+        slots: slots,
+        rocks: rocks,
+        seed: 33,
+      ),
       rockPositions: rocks,
     );
   }

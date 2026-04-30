@@ -459,3 +459,12 @@ toparla. Şu an `main` üzerindeyiz, working tree dirty.
 - Header, stat değerleri, targeting butonları, upgrade ve sell aksiyonları
   küçültüldü; panel oyun alanını daha az kaplıyor.
 - Doğrulama: `flutter analyze` temiz, `flutter build web` başarılı.
+
+### 2026-04-30 — Codex denser forest and rocks
+
+- Orman grid adımı 48px'ten 40px'e indirildi; path/slot/kaya clearance
+  değerleri hafif azaltılarak ağaçlar daha sık, ama yol ve kule slotları
+  okunur kalacak şekilde yerleşiyor.
+- Snake kaya sayısı 6'dan 10'a, Zigzag 6'dan 10'a, U-Loop 6'dan 9'a
+  çıkarıldı.
+- Doğrulama: `flutter analyze` temiz, `flutter build web` başarılı.
