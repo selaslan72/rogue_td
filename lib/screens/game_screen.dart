@@ -144,13 +144,16 @@ class _TopHud extends StatelessWidget {
               ),
               Column(
                 children: [
-                  Text(
-                    'BÖLÜM ${game.level.id}',
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.5,
+                  ValueListenableBuilder<LevelDef>(
+                    valueListenable: game.levelNotifier,
+                    builder: (_, lv, _) => Text(
+                      'BÖLÜM ${lv.id}',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.5,
+                      ),
                     ),
                   ),
                   ValueListenableBuilder<int>(

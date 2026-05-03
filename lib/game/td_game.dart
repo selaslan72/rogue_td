@@ -4,7 +4,6 @@ import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import '../data/enemy_registry.dart';
-import '../data/modifier_registry.dart';
 import '../data/tower_registry.dart';
 import '../models/enemy_def.dart';
 import '../models/level_def.dart';
@@ -31,10 +30,11 @@ class TdGame extends FlameGame with HasGameReference {
   // ─── Run state ─────────────────────────────────────────────────────────────
   static const int maxWaves = 12;
   static const int initialLives = 10;
-  static const int initialGold = 200;
+  static const int initialGold = 300;
 
   LevelDef level;
   final void Function()? onExitToLevels; // null ise sadece restart
+  late final ValueNotifier<LevelDef> levelNotifier = ValueNotifier(level);
 
   int lives = initialLives;
   int gold = initialGold;
@@ -118,8 +118,7 @@ class TdGame extends FlameGame with HasGameReference {
     camera.viewfinder.visibleGameSize = Vector2(480, 800);
     _buildMap(level.map);
     _updateWavePreview();
-    // İlk run modifier seçimi — overlay açılır, oyuncu bir modifier seçer
-    _showModifierSelection();
+    _enterPlacementPhase();
   }
 
   // ─── Harita kurulumu ──────────────────────────────────────────────────────
@@ -523,15 +522,7 @@ class TdGame extends FlameGame with HasGameReference {
     if (!runEnded && lives > 0) startNextWave();
   }
 
-  // ─── Modifier seçim akışı (run başı) ──────────────────────────────────────
-
-  void _showModifierSelection() {
-    // Bir tick geciktir: cold-load'da onLoad henüz bitmeden notifier'ı
-    // tetiklersek widget tree ilk frame'de overlay'i tam çizemiyor.
-    Future.microtask(() {
-      modifierSelectNotifier.value = ModifierRegistry.drawThree();
-    });
-  }
+  // ─── Modifier (şu an devre dışı, _enterPlacementPhase doğrudan başlatır) ──
 
   void pickModifier(RunModifier mod) {
     activeModifier = mod;
@@ -598,6 +589,7 @@ class TdGame extends FlameGame with HasGameReference {
 
   void _resetForLevel(LevelDef next) {
     level = next;
+    levelNotifier.value = next;
     startNewRun();
   }
 
@@ -636,7 +628,15 @@ class TdGame extends FlameGame with HasGameReference {
     _buildMap(level.map);
     _updateWavePreview();
     resumeEngine();
-    _showModifierSelection();
+    _enterPlacementPhase();
+  }
+
+  /// Modifier seçimi atlandı — placement fazına direkt geç. RunStats sıfır
+  /// kalır (hiçbir modifier uygulanmaz).
+  void _enterPlacementPhase() {
+    activeModifier = null;
+    stats.reset();
+    placementPhaseNotifier.value = true;
   }
 
   void exitToLevels() {
