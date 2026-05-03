@@ -11,8 +11,8 @@ import 'particle_effect.dart';
 /// Ölünce parent tower respawn timer'ı başlatır (callback).
 class SoldierComponent extends PositionComponent implements Damageable {
   final Color color;
-  final Vector2 towerPos;
-  final double recruitRange; // tower menzili — bu mesafenin dışına çıkmaz
+  final Vector2 rallyPoint;  // yol üzerinde sabit nokta — buraya geri döner
+  final double chaseRadius;  // rally point'ten bu kadar uzağa kadar kovalar
   final double damage;       // her vuruşta verdiği hasar
   final double fireRate;     // saniyede vuruş sayısı
   final double maxHp;
@@ -41,8 +41,8 @@ class SoldierComponent extends PositionComponent implements Damageable {
 
   SoldierComponent({
     required this.color,
-    required this.towerPos,
-    required this.recruitRange,
+    required this.rallyPoint,
+    required this.chaseRadius,
     required this.damage,
     required this.fireRate,
     required this.maxHp,
@@ -50,7 +50,7 @@ class SoldierComponent extends PositionComponent implements Damageable {
     required this.onDied,
     Vector2? spawnAt,
   }) : super(
-          position: (spawnAt ?? towerPos).clone(),
+          position: (spawnAt ?? rallyPoint).clone(),
           size: Vector2.all(16),
           anchor: Anchor.center,
           priority: 5,
@@ -98,16 +98,17 @@ class SoldierComponent extends PositionComponent implements Damageable {
     if (_target == null ||
         !_target!.isMounted ||
         !_target!.isAlive ||
-        _target!.worldPosition.distanceTo(towerPos) > recruitRange + 24) {
+        _target!.def.isFlying ||
+        _target!.worldPosition.distanceTo(rallyPoint) > chaseRadius + 24) {
       _target = _findNearestEnemy();
     }
 
     final t = _target;
     if (t == null) {
-      // Düşman yok: kuleye geri dön (sadece çok uzaktaysa)
-      final toTower = towerPos - position;
-      if (toTower.length > 6) {
-        position.add(toTower.normalized() * speed * 0.7 * dt);
+      // Düşman yok: rally noktasına geri dön
+      final toRally = rallyPoint - position;
+      if (toRally.length > 4) {
+        position.add(toRally.normalized() * speed * 0.7 * dt);
       }
       return;
     }
@@ -116,16 +117,16 @@ class SoldierComponent extends PositionComponent implements Damageable {
     final dist = delta.length;
 
     if (dist > contactRange) {
-      // Yürü — ama kule menzilinin dışına çıkma
+      // Yürü — ama rally noktasından chaseRadius kadar uzaklaşma
       final stepDist = speed * dt;
       final move = delta.normalized() * stepDist;
       final next = position + move;
-      if (next.distanceTo(towerPos) <= recruitRange + 8) {
+      if (next.distanceTo(rallyPoint) <= chaseRadius + 8) {
         position.setFrom(next);
       } else {
         // Sınırda dur
-        final towardEdge = (next - towerPos).normalized() * recruitRange;
-        position.setFrom(towerPos + towardEdge);
+        final towardEdge = (next - rallyPoint).normalized() * chaseRadius;
+        position.setFrom(rallyPoint + towardEdge);
       }
     } else {
       // Kontak: vur ve temas hasarı al
@@ -156,8 +157,8 @@ class SoldierComponent extends PositionComponent implements Damageable {
     double bestDist = double.infinity;
     for (final e in all) {
       if (!e.isAlive) continue;
-      // Tower menzilinin biraz dışına çıksa bile takip et — kovala
-      if (e.worldPosition.distanceTo(towerPos) > recruitRange + 24) continue;
+      if (e.def.isFlying) continue; // uçanları melee asker yakalayamaz
+      if (e.worldPosition.distanceTo(rallyPoint) > chaseRadius + 24) continue;
       final d = e.worldPosition.distanceTo(position);
       if (d < bestDist) {
         bestDist = d;

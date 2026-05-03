@@ -354,12 +354,14 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   }
 
   void _spawnSoldier(int index) {
-    final angle = (index / _barracksCount) * 2 * math.pi - math.pi / 2;
-    final spawn = position + Vector2(math.cos(angle), math.sin(angle)) * 14;
+    final rally = _findRallyPoint();
+    // 3 askere yol boyunca offset: birbirine binmesin
+    final spread = (index - 1) * 12.0; // -12, 0, +12
+    final spawn = rally + Vector2(spread, 0);
     final soldier = SoldierComponent(
       color: card.color,
-      towerPos: position.clone(),
-      recruitRange: currentRange,
+      rallyPoint: rally,
+      chaseRadius: currentRange,
       damage: currentDamage,
       fireRate: currentFireRate,
       maxHp: 50.0 * _damageMul,
@@ -372,6 +374,33 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     );
     _soldiers[index] = soldier;
     parent?.add(soldier);
+  }
+
+  /// Yol üzerinde kuleye en yakın nokta (segmentlere projeksiyon).
+  /// Menzilde değilse en yakın projeksiyon yine döner — asker kuleden uzakta da
+  /// dursa rally point her zaman yol üstündedir.
+  Vector2 _findRallyPoint() {
+    final game = findGame();
+    if (game is! TdGame) return position.clone();
+    final wps = game.currentMap.waypoints;
+    if (wps.length < 2) return position.clone();
+    Vector2 best = wps.first.clone();
+    double bestDist = double.infinity;
+    for (int i = 0; i < wps.length - 1; i++) {
+      final a = wps[i];
+      final b = wps[i + 1];
+      final ab = b - a;
+      final len2 = ab.length2;
+      if (len2 < 0.01) continue;
+      final t = ((position - a).dot(ab) / len2).clamp(0.0, 1.0);
+      final p = a + ab * t;
+      final d = position.distanceTo(p);
+      if (d < bestDist) {
+        bestDist = d;
+        best = p;
+      }
+    }
+    return best;
   }
 
   @override
