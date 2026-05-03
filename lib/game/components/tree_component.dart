@@ -33,14 +33,21 @@ class TreeComponent extends PositionComponent
     double? maxHp,
   })  : _hp = maxHp ?? (variant == TreeVariant.tree ? 85.0 : 22.0),
         super(
-          position: worldPosition,
+          position: worldPosition + Vector2(0, _yOffset(variant, sizeScale)),
           size: (variant == TreeVariant.tree
-                  ? Vector2(28, 40)
-                  : Vector2(22, 14)) *
+                  ? Vector2(46, 56)
+                  : Vector2(38, 26)) *
               sizeScale,
           anchor: Anchor.bottomCenter,
           priority: -5,
         );
+
+  /// Hücre merkezinden bottomCenter anchor için offset: ağaç gövdesi cell'in
+  /// alt yarısında otursun, taç üst yarıyı kaplasın → "boşluk yok" görünümü.
+  static double _yOffset(TreeVariant v, double scale) {
+    if (v == TreeVariant.bush) return 12 * scale;
+    return 22 * scale; // 24 (yarım hücre) ~ kadar aşağı, gövde dibi hücre alt sınırına yakın
+  }
 
   @override
   bool onTapDown(TapDownEvent event) {
@@ -53,6 +60,10 @@ class TreeComponent extends PositionComponent
 
   @override
   Vector2 get worldPosition => position;
+
+  @override
+  double get bodyRadius =>
+      (variant == TreeVariant.tree ? 22.0 : 18.0) * sizeScale;
 
   @override
   void takeDamage(double amount) {

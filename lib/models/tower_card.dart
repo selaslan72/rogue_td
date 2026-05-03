@@ -15,6 +15,7 @@ enum TowerType {
   damageOverTime, // Alev, Zehir
   chain,        // Elektrik
   support,      // Radar, Kale
+  barracks,     // Asker spawn — melee defenders
 }
 
 /// Hedefleme stratejisi — TowerComponent.update() içinde kullanılır.

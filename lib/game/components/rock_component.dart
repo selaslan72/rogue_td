@@ -47,6 +47,9 @@ class RockComponent extends PositionComponent with TapCallbacks implements Damag
   Vector2 get worldPosition => position;
 
   @override
+  double get bodyRadius => 14.0 * sizeScale;
+
+  @override
   void takeDamage(double amount) {
     if (_hp <= 0) return;
     _hp -= amount;

@@ -88,8 +88,10 @@ class ProjectileComponent extends PositionComponent {
         (target as EnemyComponent).applySlow(slowAmount, slowDuration);
       }
     }
-    if (splashRadius > 0) {
-      for (final d in game.children.whereType<Damageable>()) {
+    // Splash sadece düşmana atılan mermi için yayılır; engele (ağaç/kaya/çalı)
+    // atılan mermi sadece tek hedefe vurur, komşu engellere zarar vermez.
+    if (splashRadius > 0 && target is EnemyComponent) {
+      for (final d in game.children.whereType<EnemyComponent>()) {
         if (identical(d, target)) continue;
         if (!d.isAlive) continue;
         if (d.worldPosition.distanceTo(impactPos) <= splashRadius) {

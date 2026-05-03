@@ -11,6 +11,7 @@ import 'enemy_component.dart';
 import 'lightning_arc.dart';
 import 'particle_effect.dart';
 import 'projectile_component.dart';
+import 'soldier_component.dart';
 import 'tower_slot.dart';
 
 /// Yerleştirilmiş tower. Range içindeki düşmanları tarayıp ateş eder.
@@ -46,8 +47,22 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   static final _whitePaint = Paint()..color = Colors.white;
   static final _levelOnPaint = Paint()..color = const Color(0xFFFBBF24);
   static final _levelOffPaint = Paint()..color = Colors.white24;
+  static final _frostZonePaint = Paint()..color = const Color(0x2287CEEB);
+  static final _frostZoneBorderPaint = Paint()
+    ..color = const Color(0x6687CEEB)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.5;
 
   bool showRange = false;
+  double _frostPulse = 0.0;
+
+  // Barracks state — 3 asker slot'u, her biri ya canlı ya respawn cooldown'da
+  static const int _barracksCount = 3;
+  static const double _barracksRespawn = 3.0;
+  final List<SoldierComponent?> _soldiers =
+      List<SoldierComponent?>.filled(_barracksCount, null, growable: false);
+  final List<double> _soldierRespawn = List<double>.filled(_barracksCount, 0);
+  bool _barracksSpawned = false;
 
   // Level çarpanları
   double get _damageMul => level == 1
@@ -118,6 +133,24 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     final game = findGame();
     if (game is TdGame && game.placementPhaseNotifier.value) return;
 
+    // Barracks: 3 asker spawn et, ölünce 3s sonra yeniden doğur. Ateş yok.
+    if (card.id == 'barracks') {
+      _updateBarracks(dt);
+      return;
+    }
+
+    // Frost: tüm menzil alanı yavaşlatma zonu — hedef seçmez, projectile atmaz.
+    if (card.id == 'frost') {
+      _frostPulse = (_frostPulse + dt * 2.5) % (2 * math.pi);
+      const slowPerLevel = [0.0, 0.40, 0.52, 0.62];
+      final slowAmt = slowPerLevel[level];
+      parent?.children
+          .whereType<EnemyComponent>()
+          .where(_inRange)
+          .forEach((e) => e.applySlow(slowAmt, 0.30));
+      return;
+    }
+
     // Her frame yeniden hedefle: kullanıcı bir engele tıkladığında düşmandan
     // engele anında geçilsin; deselect olunca düşmana dönülsün.
     _currentTarget = _acquireTarget();
@@ -130,7 +163,9 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   }
 
   bool _inRange(Damageable d) {
-    return d.worldPosition.distanceTo(position) <= currentRange;
+    // Hedefin gövdesinin herhangi bir noktası menzil dairesine değiyorsa
+    // saldırı yapılabilir.
+    return d.worldPosition.distanceTo(position) <= currentRange + d.bodyRadius;
   }
 
   Damageable? _acquireTarget() {
@@ -289,7 +324,91 @@ class TowerComponent extends PositionComponent with TapCallbacks {
         }
       case TowerType.support:
         break;
+      case TowerType.barracks:
+        break; // Barracks ateş etmez — _updateBarracks tarafında ele alınır
     }
+  }
+
+  void _updateBarracks(double dt) {
+    for (int i = 0; i < _barracksCount; i++) {
+      final s = _soldiers[i];
+      if (s != null && (!s.isMounted || !s.isAlive)) {
+        // Asker kayboldu ama callback ulaşmamış olabilir → defansif
+        _soldiers[i] = null;
+        if (_soldierRespawn[i] <= 0) _soldierRespawn[i] = _barracksRespawn;
+      }
+      if (_soldiers[i] == null) {
+        if (!_barracksSpawned) continue; // İlk spawn aşağıda toplu yapılır
+        _soldierRespawn[i] -= dt;
+        if (_soldierRespawn[i] <= 0) {
+          _spawnSoldier(i);
+        }
+      }
+    }
+    if (!_barracksSpawned) {
+      for (int i = 0; i < _barracksCount; i++) {
+        _spawnSoldier(i);
+      }
+      _barracksSpawned = true;
+    }
+  }
+
+  void _spawnSoldier(int index) {
+    final rally = _findRallyPoint();
+    // 3 askere yol boyunca offset: birbirine binmesin
+    final spread = (index - 1) * 12.0; // -12, 0, +12
+    final spawn = rally + Vector2(spread, 0);
+    final soldier = SoldierComponent(
+      color: card.color,
+      rallyPoint: rally,
+      chaseRadius: currentRange,
+      damage: currentDamage,
+      fireRate: currentFireRate,
+      maxHp: 50.0 * _damageMul,
+      speed: 60,
+      spawnAt: spawn,
+      onDied: () {
+        _soldiers[index] = null;
+        _soldierRespawn[index] = _barracksRespawn;
+      },
+    );
+    _soldiers[index] = soldier;
+    parent?.add(soldier);
+  }
+
+  /// Yol üzerinde kuleye en yakın nokta (segmentlere projeksiyon).
+  /// Menzilde değilse en yakın projeksiyon yine döner — asker kuleden uzakta da
+  /// dursa rally point her zaman yol üstündedir.
+  Vector2 _findRallyPoint() {
+    final game = findGame();
+    if (game is! TdGame) return position.clone();
+    final wps = game.currentMap.waypoints;
+    if (wps.length < 2) return position.clone();
+    Vector2 best = wps.first.clone();
+    double bestDist = double.infinity;
+    for (int i = 0; i < wps.length - 1; i++) {
+      final a = wps[i];
+      final b = wps[i + 1];
+      final ab = b - a;
+      final len2 = ab.length2;
+      if (len2 < 0.01) continue;
+      final t = ((position - a).dot(ab) / len2).clamp(0.0, 1.0);
+      final p = a + ab * t;
+      final d = position.distanceTo(p);
+      if (d < bestDist) {
+        bestDist = d;
+        best = p;
+      }
+    }
+    return best;
+  }
+
+  @override
+  void onRemove() {
+    for (final s in _soldiers) {
+      if (s != null && s.isMounted) s.removeFromParent();
+    }
+    super.onRemove();
   }
 
   EnemyComponent? _findChainNext(EnemyComponent from, Set<EnemyComponent> hit) {
@@ -319,6 +438,13 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   @override
   void render(Canvas canvas) {
     final center = Offset(size.x / 2, size.y / 2);
+
+    // Frost: kalıcı buz zonu dairesi (zemin katmanı)
+    if (card.id == 'frost') {
+      final pulse = 1.0 + math.sin(_frostPulse) * 0.012;
+      canvas.drawCircle(center, currentRange * pulse, _frostZonePaint);
+      canvas.drawCircle(center, currentRange * pulse, _frostZoneBorderPaint);
+    }
 
     if (showRange) {
       canvas.drawCircle(center, currentRange, _rangeSelectedPaint);
@@ -370,6 +496,8 @@ class TowerComponent extends PositionComponent with TapCallbacks {
         _renderFlame(canvas, center, level);
       case 'tesla':
         _renderTesla(canvas, center, level);
+      case 'barracks':
+        _renderBarracks(canvas, center, level);
       default:
         canvas.drawCircle(center, 8, _bodyPaint);
         canvas.drawCircle(center, 8, _strokePaint);
@@ -627,6 +755,75 @@ class TowerComponent extends PositionComponent with TapCallbacks {
           Offset(center.dx + dx, center.dy - 6),
           1.6,
           _accentPaint,
+        );
+      }
+    }
+  }
+
+  // ── Barracks ───────────────────────────────────────────────────────────
+  // L1: küçük surlu kapı + 2 mazgal
+  // L2: daha geniş yapı + bayrak
+  // L3: çift kuleli surlu yapı
+  void _renderBarracks(Canvas canvas, Offset center, int lvl) {
+    final w = lvl == 1 ? 18.0 : (lvl == 2 ? 22.0 : 24.0);
+    final h = lvl == 1 ? 14.0 : 16.0;
+    final left = center.dx - w / 2;
+    final top = center.dy - h / 2 + 1;
+
+    // Ana sur duvarı
+    canvas.drawRect(Rect.fromLTWH(left, top, w, h), _bodyPaint);
+    canvas.drawRect(Rect.fromLTWH(left, top, w, h), _strokePaint);
+
+    // Mazgallar (üst)
+    final crenN = lvl == 1 ? 3 : (lvl == 2 ? 4 : 5);
+    final crenW = w / (crenN * 2 - 1);
+    for (int i = 0; i < crenN; i++) {
+      final cx = left + i * crenW * 2;
+      canvas.drawRect(
+        Rect.fromLTWH(cx, top - 2.5, crenW, 2.5),
+        _bodyPaint,
+      );
+      canvas.drawRect(
+        Rect.fromLTWH(cx, top - 2.5, crenW, 2.5),
+        _strokePaint,
+      );
+    }
+
+    // Kapı
+    final gateW = lvl == 3 ? 5.0 : 6.0;
+    final gateH = h * 0.6;
+    final gateRect = RRect.fromRectAndCorners(
+      Rect.fromLTWH(center.dx - gateW / 2, center.dy + h / 2 - gateH + 1, gateW, gateH),
+      topLeft: const Radius.circular(3),
+      topRight: const Radius.circular(3),
+    );
+    canvas.drawRRect(gateRect, _darkPaint);
+
+    // Bayrak (L2+)
+    if (lvl >= 2) {
+      final poleX = center.dx + w / 2 - 2;
+      canvas.drawRect(
+        Rect.fromLTWH(poleX, top - 7, 0.8, 7),
+        _darkPaint,
+      );
+      final flag = Path()
+        ..moveTo(poleX + 0.8, top - 7)
+        ..lineTo(poleX + 5.5, top - 5.5)
+        ..lineTo(poleX + 0.8, top - 4)
+        ..close();
+      canvas.drawPath(flag, _accentPaint);
+    }
+
+    // Yan kuleler (L3)
+    if (lvl == 3) {
+      for (final dx in [-w / 2, w / 2 - 3]) {
+        canvas.drawRect(
+          Rect.fromLTWH(center.dx + dx, top - 4, 3, h + 4),
+          _accentPaint,
+        );
+        canvas.drawRect(
+          Rect.fromLTWH(center.dx + dx, top - 4, 3, h + 4),
+          _strokePaint,
         );
       }
     }

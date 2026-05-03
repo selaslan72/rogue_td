@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../models/enemy_def.dart';
 import 'damageable.dart';
 import 'particle_effect.dart';
+import 'soldier_component.dart';
 
 /// Yol üzerinde waypoint'leri takip eden düşman.
 /// HP bittiğinde ölür ve callback'le altın verir.
@@ -68,6 +69,8 @@ class EnemyComponent extends PositionComponent implements Damageable {
   bool get isAlive => _hp > 0;
   @override
   Vector2 get worldPosition => position;
+  @override
+  double get bodyRadius => 10.0 * def.sizeScale;
   double get pathProgress {
     if (waypoints.length < 2) return 0;
     if (_waypointIndex >= waypoints.length) return waypoints.length.toDouble();
@@ -101,6 +104,18 @@ class EnemyComponent extends PositionComponent implements Damageable {
     }
   }
 
+  bool _isBlockedBySoldier() {
+    const blockRange = 14.0;
+    final list = parent?.children.whereType<SoldierComponent>() ?? const [];
+    for (final s in list) {
+      if (!s.isAlive) continue;
+      if (s.worldPosition.distanceTo(position) <= blockRange + bodyRadius) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   void applySlow(double multiplier, double duration) {
     _slowMultiplier = multiplier;
     _slowTimer = duration;
@@ -121,6 +136,12 @@ class EnemyComponent extends PositionComponent implements Damageable {
     if (_waypointIndex >= waypoints.length) {
       onLeaked(this);
       removeFromParent();
+      return;
+    }
+
+    // Asker bloku — uçanlar geçer, diğerleri durur ve melee yer (hasar
+    // soldier tarafında uygulanır).
+    if (!def.isFlying && _isBlockedBySoldier()) {
       return;
     }
 

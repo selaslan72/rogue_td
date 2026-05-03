@@ -67,7 +67,7 @@ class _SlotTowerPickerOverlay extends StatelessWidget {
 
   static const double _worldW = 480;
   static const double _worldH = 800;
-  static const double _pickerW = 412;
+  static const double _pickerW = 470;
   static const double _pickerH = 96;
 
   @override
@@ -710,14 +710,14 @@ class _TowerSelector extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             itemCount: unlocked.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            separatorBuilder: (_, _) => const SizedBox(width: 6),
             itemBuilder: (_, i) {
               final card = unlocked[i];
               final isSelected = card.id == selected.id;
               return GestureDetector(
                 onTap: () => game.placeTowerFromPicker(card),
                 child: Container(
-                  width: 76,
+                  width: 68,
                   padding: const EdgeInsets.symmetric(vertical: 7),
                   decoration: BoxDecoration(
                     color: isSelected
