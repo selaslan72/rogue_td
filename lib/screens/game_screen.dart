@@ -1091,7 +1091,7 @@ class _PlacementOverlay extends StatelessWidget {
         return Align(
           alignment: Alignment.bottomCenter,
           child: Padding(
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: const EdgeInsets.only(bottom: 64),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
