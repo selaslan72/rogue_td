@@ -1,17 +1,21 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../data/level_registry.dart';
 import '../game/components/tower_slot.dart';
 import '../game/components/tower_component.dart';
 import '../game/td_game.dart';
 import '../models/enemy_def.dart';
+import '../models/level_def.dart';
 import '../models/run_modifier.dart';
 import '../models/run_result.dart';
 import '../models/tower_card.dart';
+import '../services/progress_service.dart';
 
 /// GameWidget'ı saran ekran. HUD overlay + tower seçici barı içerir.
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+  final LevelDef level;
+  const GameScreen({super.key, required this.level});
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -23,7 +27,10 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
-    _game = TdGame();
+    _game = TdGame(
+      level: widget.level,
+      onExitToLevels: () => Navigator.of(context).pop(),
+    );
   }
 
   @override
@@ -137,10 +144,19 @@ class _TopHud extends StatelessWidget {
               ),
               Column(
                 children: [
+                  Text(
+                    'BÖLÜM ${game.level.id}',
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
                   ValueListenableBuilder<int>(
                     valueListenable: game.waveNotifier,
                     builder: (_, wave, _) => Text(
-                      'WAVE $wave',
+                      'WAVE $wave / ${TdGame.maxWaves}',
                       style: const TextStyle(
                         color: Color(0xFFFBBF24),
                         fontSize: 14,
@@ -901,6 +917,24 @@ class _RunResultOverlay extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  // Yıldız satırı (3 ikon, kazanılan kadar dolu)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(3, (i) {
+                      final filled = i < result.stars;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(
+                          filled ? Icons.star_rounded : Icons.star_border_rounded,
+                          color: filled
+                              ? const Color(0xFFFBBF24)
+                              : Colors.white24,
+                          size: 44,
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
@@ -911,10 +945,17 @@ class _RunResultOverlay extends StatelessWidget {
                     child: Column(
                       children: [
                         _ResultRow(
-                          label: 'Wave Reached',
-                          value: '${result.waveReached} / 15',
+                          label: 'Bölüm',
+                          value: '${result.levelId} — ${result.mapName}',
                         ),
-                        _ResultRow(label: 'Map', value: result.mapName),
+                        _ResultRow(
+                          label: 'Wave Reached',
+                          value: '${result.waveReached} / ${result.totalWaves}',
+                        ),
+                        _ResultRow(
+                          label: 'Lives Left',
+                          value: '${result.livesLeft} / ${result.initialLives}',
+                        ),
                         _ResultRow(
                           label: 'Final Gold',
                           value: '💰 ${result.finalGold}',
@@ -946,58 +987,90 @@ class _RunResultOverlay extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            Clipboard.setData(
-                              ClipboardData(text: result.shareCard),
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Copied to clipboard'),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            side: const BorderSide(color: Colors.white24),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          icon: const Icon(Icons.share, size: 16),
-                          label: const Text('SHARE'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton(
-                          onPressed: game.startNewRun,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFBBF24),
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: const Text(
-                            'NEW RUN',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  _ResultActions(game: game, result: result),
                 ],
               ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _ResultActions extends StatelessWidget {
+  final TdGame game;
+  final RunResult result;
+  const _ResultActions({required this.game, required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    final nextLevel = LevelRegistry.all
+        .where((l) => l.id == result.levelId + 1)
+        .firstOrNull;
+    final canAdvance = result.victory &&
+        nextLevel != null &&
+        ProgressService.instance.isUnlocked(nextLevel.starsRequired);
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: result.shareCard));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Copied to clipboard'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white24),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                icon: const Icon(Icons.share, size: 16),
+                label: const Text('SHARE'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: game.exitToLevels,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white24),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text('BÖLÜMLER'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: canAdvance ? () => game.startLevel(nextLevel) : game.restartLevel,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFBBF24),
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            child: Text(
+              canAdvance ? 'SONRAKİ BÖLÜM' : 'TEKRAR DENE',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

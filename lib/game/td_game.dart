@@ -7,10 +7,12 @@ import '../data/enemy_registry.dart';
 import '../data/modifier_registry.dart';
 import '../data/tower_registry.dart';
 import '../models/enemy_def.dart';
+import '../models/level_def.dart';
 import '../models/run_modifier.dart';
 import '../models/run_result.dart';
 import '../models/run_stats.dart';
 import '../models/tower_card.dart';
+import '../services/progress_service.dart';
 import 'components/castle_component.dart';
 import 'components/damageable.dart';
 import 'components/enemy_component.dart';
@@ -23,13 +25,16 @@ import 'components/tree_component.dart';
 import 'path_data.dart';
 
 /// Ana FlameGame. Run state'ini kendi içinde tutar (Riverpod yok).
-/// 15 wave / run, wave 5+10 mini-boss, wave 15 final boss.
-/// Run bitince sonuç overlay'i, "NEW RUN" → yeni harita + yeni modifier.
+/// 12 wave / bölüm, wave 6 mini-boss, wave 12 final boss.
+/// Bölüm tanımı (harita, zorluk multipliers) constructor'dan alınır.
 class TdGame extends FlameGame with HasGameReference {
   // ─── Run state ─────────────────────────────────────────────────────────────
-  static const int maxWaves = 15;
+  static const int maxWaves = 12;
   static const int initialLives = 10;
   static const int initialGold = 200;
+
+  LevelDef level;
+  final void Function()? onExitToLevels; // null ise sadece restart
 
   int lives = initialLives;
   int gold = initialGold;
@@ -38,7 +43,7 @@ class TdGame extends FlameGame with HasGameReference {
   bool waveActive = false;
   bool runEnded = false;
 
-  GameMap currentMap = PathData.snake;
+  GameMap get currentMap => level.map;
   RunModifier? activeModifier;
   final RunStats stats = RunStats();
   final List<TowerCard> unlockedTowers = List.from(TowerRegistry.all);
@@ -105,11 +110,13 @@ class TdGame extends FlameGame with HasGameReference {
   @override
   Color backgroundColor() => const Color(0xFF0D1A0D);
 
+  TdGame({required this.level, this.onExitToLevels});
+
   @override
   Future<void> onLoad() async {
     super.onLoad();
     camera.viewfinder.visibleGameSize = Vector2(480, 800);
-    _buildMap(PathData.random());
+    _buildMap(level.map);
     _updateWavePreview();
     // İlk run modifier seçimi — overlay açılır, oyuncu bir modifier seçer
     _showModifierSelection();
@@ -120,7 +127,6 @@ class TdGame extends FlameGame with HasGameReference {
   static final _forestRng = math.Random();
 
   void _buildMap(GameMap map) {
-    currentMap = map;
     _clusters.clear();
     _nextClusterId = 0;
 
@@ -367,13 +373,13 @@ class TdGame extends FlameGame with HasGameReference {
     // Boss wave'lerde daha geniş aralık; normal wave'lerde wave'le birlikte kısalsın
     _spawnInterval = wave == maxWaves
         ? 2.0
-        : (wave == 5 || wave == 10
+        : (wave == 6
               ? 1.8
-              : (1.5 - (wave - 1) * 0.06).clamp(0.55, 1.5));
+              : (1.5 - (wave - 1) * 0.07).clamp(0.55, 1.5));
     _flashMessage(
       wave == maxWaves
           ? 'FINAL BOSS'
-          : (wave == 5 || wave == 10 ? 'BOSS WAVE $wave' : 'WAVE $wave'),
+          : (wave == 6 ? 'BOSS WAVE $wave' : 'WAVE $wave'),
     );
   }
 
@@ -388,14 +394,15 @@ class TdGame extends FlameGame with HasGameReference {
     if (w == maxWaves) {
       // Final boss + adds
       result.add(EnemyRegistry.finalBoss);
-      result.addAll(List.filled(8, EnemyRegistry.tank));
-      result.addAll(List.filled(6, EnemyRegistry.basic));
+      result.addAll(List.filled(6, EnemyRegistry.tank));
+      result.addAll(List.filled(8, EnemyRegistry.basic));
+      result.addAll(List.filled(2, EnemyRegistry.flying));
       return result;
     }
-    if (w == 5 || w == 10) {
+    if (w == 6) {
       result.add(EnemyRegistry.miniBoss);
-      result.addAll(List.filled(w == 10 ? 8 : 5, EnemyRegistry.basic));
-      result.addAll(List.filled(w == 10 ? 4 : 2, EnemyRegistry.tank));
+      result.addAll(List.filled(7, EnemyRegistry.basic));
+      result.addAll(List.filled(3, EnemyRegistry.tank));
       return result;
     }
     final base = ((8 + w * 2) * stats.enemyCountMul).round();
@@ -403,7 +410,7 @@ class TdGame extends FlameGame with HasGameReference {
       EnemyDef pick;
       if (w >= 7 && i % 4 == 0) {
         pick = EnemyRegistry.flying;
-      } else if (w >= 6 && i % 5 == 0) {
+      } else if (w >= 5 && i % 5 == 0) {
         pick = EnemyRegistry.tank;
       } else if (w >= 3 && i % 3 == 0) {
         pick = EnemyRegistry.fast;
@@ -444,7 +451,7 @@ class TdGame extends FlameGame with HasGameReference {
       final enemiesAlive = children.whereType<EnemyComponent>().isNotEmpty;
       if (!enemiesAlive) {
         waveActive = false;
-        gold += wave == maxWaves ? 0 : (wave == 5 || wave == 10 ? 100 : 50);
+        gold += wave == maxWaves ? 0 : (wave == 6 ? 100 : 50);
         goldNotifier.value = gold;
         if (wave >= maxWaves) {
           _endRun(victory: true);
@@ -458,8 +465,9 @@ class TdGame extends FlameGame with HasGameReference {
   void _spawnNextEnemy() {
     if (_waveQueue.isEmpty) return;
     final def = _waveQueue.removeAt(0);
-    // Wave bazlı zorluk: HP %8/wave, hız %2/wave artar
-    final waveHpScale = 1.0 + (wave - 1) * 0.08;
+    // Bölüm + wave bazlı zorluk: HP %10/wave, hız %2/wave artar; bölüm
+    // multipliers (level.hpMul / speedMul) bunun üstüne çarpılır.
+    final waveHpScale = 1.0 + (wave - 1) * 0.10;
     final waveSpeedScale = 1.0 + (wave - 1) * 0.02;
     add(
       EnemyComponent(
@@ -467,8 +475,8 @@ class TdGame extends FlameGame with HasGameReference {
         waypoints: currentMap.waypoints,
         onKilled: _onEnemyKilled,
         onLeaked: _onEnemyLeaked,
-        hpMultiplier: stats.enemyHpMul * waveHpScale,
-        speedMultiplier: stats.enemySpeedMul * waveSpeedScale,
+        hpMultiplier: stats.enemyHpMul * waveHpScale * level.hpMul,
+        speedMultiplier: stats.enemySpeedMul * waveSpeedScale * level.speedMul,
         armorBonus: stats.enemyArmorBonus,
       ),
     );
@@ -559,15 +567,38 @@ class TdGame extends FlameGame with HasGameReference {
         .map((t) => t.card)
         .toSet()
         .toList();
+    final stars = victory
+        ? RunResult.starsFromLives(lives, initialLives)
+        : 0;
+    if (stars > 0) {
+      // Asenkron — UI bunu beklemiyor, kayıt arka planda olur
+      ProgressService.instance.setStars(level.id, stars);
+    }
     runResultNotifier.value = RunResult(
       victory: victory,
       waveReached: wave,
+      totalWaves: maxWaves,
       finalGold: gold,
+      livesLeft: lives,
+      initialLives: initialLives,
+      stars: stars,
+      levelId: level.id,
       mapName: currentMap.name,
       modifier: activeModifier,
       towersUsed: towers,
     );
     pauseEngine();
+  }
+
+  /// Aynı bölümü baştan başlat (yeni modifier seçimi açılır).
+  void restartLevel() => _resetForLevel(level);
+
+  /// Farklı bir bölüme geç.
+  void startLevel(LevelDef next) => _resetForLevel(next);
+
+  void _resetForLevel(LevelDef next) {
+    level = next;
+    startNewRun();
   }
 
   /// Yeni run: harita + state tamamen sıfırlanır, yeni modifier seçimi açılır.
@@ -602,10 +633,14 @@ class TdGame extends FlameGame with HasGameReference {
     selectedExistingTowerNotifier.value = null;
 
     _clearMap();
-    _buildMap(PathData.random());
+    _buildMap(level.map);
     _updateWavePreview();
     resumeEngine();
     _showModifierSelection();
+  }
+
+  void exitToLevels() {
+    onExitToLevels?.call();
   }
 }
 

@@ -272,7 +272,155 @@ class PathData {
     ],
   );
 
-  static final List<GameMap> all = [snake, zigzag, uLoop];
+  // ─────────────────────────────────────────────────────────────────────────
+  // Harita 4 — CROSS (X-yolu, soldan girer, alt sağa çıkar; ortada çapraz)
+  // ─────────────────────────────────────────────────────────────────────────
+  static final cross = _assemble(
+    name: 'Cross',
+    waypoints: <Vector2>[
+      Vector2(0, 120),
+      Vector2(140, 120),
+      Vector2(140, 280),
+      Vector2(340, 280),
+      Vector2(340, 120),
+      Vector2(420, 120),
+      Vector2(420, 460),
+      Vector2(140, 460),
+      Vector2(140, 620),
+      Vector2(340, 620),
+      Vector2(340, 760),
+      Vector2(480, 760),
+    ],
+    rawSlots: <Vector2>[
+      Vector2(60, 60),
+      Vector2(220, 60),
+      Vector2(380, 60),
+      Vector2(220, 200),
+      Vector2(60, 200),
+      Vector2(220, 360),
+      Vector2(60, 360),
+      Vector2(380, 360),
+      Vector2(220, 540),
+      Vector2(60, 540),
+      Vector2(380, 540),
+      Vector2(220, 700),
+      Vector2(60, 700),
+    ],
+    rawRocks: const <(double, double, double)>[
+      (290, 50, 1.0),
+      (60, 280, 0.95),
+      (420, 230, 1.1),
+      (290, 360, 0.9),
+      (60, 460, 1.05),
+      (420, 580, 0.95),
+      (290, 700, 1.1),
+      (170, 720, 0.9),
+    ],
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Harita 5 — DOUBLE LOOP (iki halka, üst halka sola, alt halka sağa)
+  // ─────────────────────────────────────────────────────────────────────────
+  static final doubleLoop = _assemble(
+    name: 'Double Loop',
+    waypoints: <Vector2>[
+      Vector2(60, 0),
+      Vector2(60, 140),
+      Vector2(420, 140),
+      Vector2(420, 320),
+      Vector2(60, 320),
+      Vector2(60, 460),
+      Vector2(420, 460),
+      Vector2(420, 640),
+      Vector2(60, 640),
+      Vector2(60, 760),
+      Vector2(480, 760),
+    ],
+    rawSlots: <Vector2>[
+      Vector2(160, 70),
+      Vector2(280, 70),
+      Vector2(380, 70),
+      Vector2(160, 230),
+      Vector2(280, 230),
+      Vector2(380, 230),
+      Vector2(160, 390),
+      Vector2(280, 390),
+      Vector2(380, 390),
+      Vector2(160, 550),
+      Vector2(280, 550),
+      Vector2(380, 550),
+      Vector2(220, 700),
+      Vector2(340, 700),
+    ],
+    rawRocks: const <(double, double, double)>[
+      (240, 60, 0.95),
+      (130, 230, 1.0),
+      (350, 230, 1.1),
+      (240, 220, 0.9),
+      (130, 390, 1.0),
+      (350, 390, 0.95),
+      (240, 380, 1.05),
+      (130, 550, 1.1),
+      (350, 550, 0.95),
+      (240, 540, 0.9),
+      (160, 760, 1.0),
+      (340, 760, 1.0),
+    ],
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Harita 6 — MAZE (yoğun zigzag, 7 dönüş)
+  // ─────────────────────────────────────────────────────────────────────────
+  static final maze = _assemble(
+    name: 'Maze',
+    waypoints: <Vector2>[
+      Vector2(0, 60),
+      Vector2(120, 60),
+      Vector2(120, 200),
+      Vector2(360, 200),
+      Vector2(360, 80),
+      Vector2(440, 80),
+      Vector2(440, 360),
+      Vector2(60, 360),
+      Vector2(60, 500),
+      Vector2(360, 500),
+      Vector2(360, 640),
+      Vector2(120, 640),
+      Vector2(120, 760),
+      Vector2(480, 760),
+    ],
+    rawSlots: <Vector2>[
+      Vector2(60, 130),
+      Vector2(240, 130),
+      Vector2(240, 270),
+      Vector2(60, 270),
+      Vector2(360, 280),
+      Vector2(160, 290),
+      Vector2(240, 430),
+      Vector2(360, 430),
+      Vector2(160, 430),
+      Vector2(240, 570),
+      Vector2(60, 570),
+      Vector2(440, 580),
+      Vector2(240, 700),
+      Vector2(420, 700),
+      Vector2(60, 700),
+    ],
+    rawRocks: const <(double, double, double)>[
+      (220, 30, 1.0),
+      (380, 150, 0.9),
+      (60, 200, 1.05),
+      (320, 350, 0.95),
+      (440, 460, 1.0),
+      (60, 460, 1.1),
+      (300, 580, 0.95),
+      (180, 580, 0.9),
+      (60, 760, 0.95),
+      (300, 760, 1.05),
+    ],
+  );
+
+  static final List<GameMap> all = [snake, zigzag, uLoop, cross, doubleLoop, maze];
 
   static final _rng = Random();
   static GameMap random() => all[_rng.nextInt(all.length)];
