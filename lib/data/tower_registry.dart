@@ -62,6 +62,20 @@ class TowerRegistry {
     icon: '🔥',
   );
 
+  static const barracks = TowerCard(
+    id: 'barracks',
+    name: 'Barracks',
+    description: '3 melee soldiers; respawn 3s after death.',
+    rarity: TowerRarity.common,
+    type: TowerType.barracks,
+    baseCost: 100,
+    damage: 8,
+    range: 100,
+    fireRate: 1.0,
+    color: Color(0xFF92400E),
+    icon: '🛡️',
+  );
+
   static const tesla = TowerCard(
     id: 'tesla',
     name: 'Tesla',
@@ -76,7 +90,7 @@ class TowerRegistry {
     icon: '⚡',
   );
 
-  static const List<TowerCard> all = [archer, cannon, frost, flame, tesla];
+  static const List<TowerCard> all = [archer, cannon, frost, flame, tesla, barracks];
 
   static TowerCard byId(String id) =>
       all.firstWhere((c) => c.id == id, orElse: () => archer);

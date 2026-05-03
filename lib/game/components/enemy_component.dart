@@ -68,6 +68,8 @@ class EnemyComponent extends PositionComponent implements Damageable {
   bool get isAlive => _hp > 0;
   @override
   Vector2 get worldPosition => position;
+  @override
+  double get bodyRadius => 10.0 * def.sizeScale;
   double get pathProgress {
     if (waypoints.length < 2) return 0;
     if (_waypointIndex >= waypoints.length) return waypoints.length.toDouble();

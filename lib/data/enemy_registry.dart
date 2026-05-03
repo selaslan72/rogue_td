@@ -13,6 +13,7 @@ class EnemyRegistry {
     armor: 0,
     goldReward: 3,
     damageOnLeak: 1,
+    contactDamage: 4,
     color: Color(0xFFFBBF24),
   );
 
@@ -25,6 +26,7 @@ class EnemyRegistry {
     armor: 0,
     goldReward: 5,
     damageOnLeak: 1,
+    contactDamage: 7,
     color: Color(0xFFEF4444),
   );
 
@@ -37,6 +39,7 @@ class EnemyRegistry {
     armor: 5,
     goldReward: 12,
     damageOnLeak: 1,
+    contactDamage: 14,
     color: Color(0xFF7C3AED),
   );
 
@@ -49,6 +52,7 @@ class EnemyRegistry {
     armor: 0,
     goldReward: 6,
     damageOnLeak: 1,
+    contactDamage: 5,
     color: Color(0xFFF472B6),
   );
 
@@ -61,6 +65,7 @@ class EnemyRegistry {
     armor: 8,
     goldReward: 80,
     damageOnLeak: 1,
+    contactDamage: 30,
     color: Color(0xFF9333EA),
     sizeScale: 1.6,
   );
@@ -74,6 +79,7 @@ class EnemyRegistry {
     armor: 12,
     goldReward: 250,
     damageOnLeak: 1,
+    contactDamage: 60,
     color: Color(0xFF7F1D1D),
     sizeScale: 2.0,
   );

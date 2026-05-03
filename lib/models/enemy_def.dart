@@ -19,6 +19,7 @@ class EnemyDef {
   final int armor;          // hasardan düşülen sabit
   final int goldReward;     // ölünce verilen altın
   final int damageOnLeak;   // yola sızarsa kaç can götürür
+  final double contactDamage; // Barracks askerlerine temasta verdiği saniyelik hasar
   final Color color;        // şimdilik geometri renk
   final double sizeScale;   // 1.0 = default; boss için 1.7 vb.
 
@@ -31,6 +32,7 @@ class EnemyDef {
     this.armor = 0,
     this.goldReward = 5,
     this.damageOnLeak = 1,
+    this.contactDamage = 6,
     required this.color,
     this.sizeScale = 1.0,
   });
