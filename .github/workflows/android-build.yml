@@ -1,0 +1,73 @@
+name: Android APK Build
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter 3.41.9
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.9"
+          channel: stable
+          cache: true
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Build debug APK
+        run: flutter build apk --debug
+
+      - name: Rename APK with branch + sha
+        id: rename
+        run: |
+          BRANCH="${GITHUB_REF_NAME//\//-}"
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          NAME="rogue_td-${BRANCH}-${SHORT_SHA}.apk"
+          cp build/app/outputs/flutter-apk/app-debug.apk "build/${NAME}"
+          echo "name=${NAME}" >> "$GITHUB_OUTPUT"
+          echo "path=build/${NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.rename.outputs.name }}
+          path: ${{ steps.rename.outputs.path }}
+          retention-days: 30
+
+      - name: Publish to "latest-debug" prerelease (main only)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-debug
+          name: Latest debug build (main)
+          prerelease: true
+          files: ${{ steps.rename.outputs.path }}
+          body: |
+            Otomatik debug APK — `main` üzerindeki son commit.
+            Commit: `${{ github.sha }}`
+            Telefondan kurmak için: indir → "Bilinmeyen kaynaklara izin ver" → kur.
