@@ -969,6 +969,10 @@ class _RunResultOverlay extends StatelessWidget {
                             value:
                                 '${result.modifier!.icon} ${result.modifier!.name}',
                           ),
+                        _ResultRow(
+                          label: 'Fragments',
+                          value: '+${result.fragmentsEarned} 💎',
+                        ),
                         const SizedBox(height: 8),
                         const Text(
                           'Towers Used',

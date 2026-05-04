@@ -15,6 +15,7 @@ class RunResult {
   final String mapName;
   final RunModifier? modifier;
   final List<TowerCard> towersUsed;
+  final int fragmentsEarned;
 
   const RunResult({
     required this.victory,
@@ -28,6 +29,7 @@ class RunResult {
     required this.mapName,
     required this.modifier,
     required this.towersUsed,
+    required this.fragmentsEarned,
   });
 
   /// Kalan can yüzdesine göre yıldız.
@@ -46,6 +48,6 @@ class RunResult {
     final towers = towersUsed.map((t) => t.icon).join('');
     final mod = modifier == null ? '' : '\n${modifier!.icon} ${modifier!.name}';
     final starStr = '★' * stars + '☆' * (3 - stars);
-    return '$flag\nBölüm $levelId — $mapName\nWave $waveReached / $totalWaves\n$starStr\nTowers: $towers$mod\n#RogueTD';
+    return '$flag\nBölüm $levelId — $mapName\nWave $waveReached / $totalWaves\n$starStr\nTowers: $towers$mod\n+$fragmentsEarned 💎\n#RogueTD';
   }
 }

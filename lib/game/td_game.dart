@@ -561,8 +561,12 @@ class TdGame extends FlameGame with HasGameReference {
     final stars = victory
         ? RunResult.starsFromLives(lives, initialLives)
         : 0;
+    // Fragment: her wave başına 1 baz, yıldız çarpanı eklenir.
+    // Yenilgide bile wave ilerlemesi ödüllendirilir (min çarpan 1).
+    final fragmentsEarned = wave * (stars > 0 ? stars : 1);
+    // Asenkron — UI bunu beklemiyor, kayıt arka planda olur
+    ProgressService.instance.addFragments(fragmentsEarned);
     if (stars > 0) {
-      // Asenkron — UI bunu beklemiyor, kayıt arka planda olur
       ProgressService.instance.setStars(level.id, stars);
     }
     runResultNotifier.value = RunResult(
@@ -577,6 +581,7 @@ class TdGame extends FlameGame with HasGameReference {
       mapName: currentMap.name,
       modifier: activeModifier,
       towersUsed: towers,
+      fragmentsEarned: fragmentsEarned,
     );
     pauseEngine();
   }
