@@ -15,6 +15,26 @@ assistant.
 
 ## Current Handoff
 
+### 2026-05-07 — Codex Issue #4 fix (branch `claude/web-progress-fix`)
+
+**GitHub Issue #4 lokal olarak çözüldü.** Henüz commit/push yapılmadı.
+
+- `td_game.dart`: `onLoad()` içinde `await super.onLoad()` kullanıldı.
+- `game_screen.dart`: BAŞLAT butonu `_TopHud` içinden çıkarıldı; oyun
+  `Stack`'i üzerinde bağımsız `_PlacementStartOverlay` olarak render ediliyor.
+  Böylece HUD layout/clip ve ilk build sırası butonu saklayamıyor.
+- Doğrulama:
+  - `flutter analyze` temiz.
+  - `flutter build web` başarılı.
+  - Lokal `build/web` server + in-app browser testi:
+    - Level 1 açıldı.
+    - BAŞLAT butonu alt ortada görünür.
+    - Butona basınca `WAVE 0/12` → `WAVE 1/12`, düşmanlar spawn oluyor.
+    - Browser console error yok.
+
+Sonraki adım: değişiklikleri commit/push edip Issue #4'ü GitHub'da kapat ya da
+PR aç.
+
 ### 2026-05-07 — Web progress fix + BAŞLAT bug (branch `claude/web-progress-fix`)
 
 İki commit, branch push'lanmış. **GitHub Issue #4 açık.**

@@ -114,7 +114,7 @@ class TdGame extends FlameGame with HasGameReference {
 
   @override
   Future<void> onLoad() async {
-    super.onLoad();
+    await super.onLoad();
     camera.viewfinder.visibleGameSize = Vector2(480, 800);
     _buildMap(level.map);
     _updateWavePreview();
