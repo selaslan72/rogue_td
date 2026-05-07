@@ -51,7 +51,6 @@ class _GameScreenState extends State<GameScreen> {
                   Positioned.fill(child: _WaveRewardOverlay(game: _game)),
                   Positioned.fill(child: _ModifierSelectOverlay(game: _game)),
                   Positioned.fill(child: _RunResultOverlay(game: _game)),
-                  Positioned.fill(child: _PlacementOverlay(game: _game)),
                   Positioned(
                     top: 8,
                     right: 8,
@@ -198,6 +197,44 @@ class _TopHud extends StatelessWidget {
           ValueListenableBuilder<List<EnemyDef>>(
             valueListenable: game.wavePreviewNotifier,
             builder: (_, preview, _) => _WavePreview(enemies: preview),
+          ),
+          ValueListenableBuilder<bool>(
+            valueListenable: game.placementPhaseNotifier,
+            builder: (_, isPlacing, _) {
+              if (!isPlacing) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: GestureDetector(
+                  onTap: game.startFirstWave,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 48,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFBBF24),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0xAAFBBF24),
+                          blurRadius: 14,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      '▶  BAŞLAT',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -1078,76 +1115,6 @@ class _ResultActions extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _PlacementOverlay extends StatelessWidget {
-  final TdGame game;
-  const _PlacementOverlay({required this.game});
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: game.placementPhaseNotifier,
-      builder: (_, isPlacing, _) {
-        if (!isPlacing) return const SizedBox.shrink();
-        return Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 64),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    'Kulelerini kur, hazır olunca başlat',
-                    style: TextStyle(color: Colors.white70, fontSize: 11),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: game.startFirstWave,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 48,
-                      vertical: 14,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFBBF24),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0xAAFBBF24),
-                          blurRadius: 16,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: const Text(
-                      '▶  BAŞLAT',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }
