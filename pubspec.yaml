@@ -15,8 +15,6 @@ dependencies:
   flame_audio: ^2.10.0
 
   # Meta progression
-  sqflite: ^2.3.3
-  path_provider: ^2.1.4
   shared_preferences: ^2.3.2
 
   # Run result paylaşımı (Sprint 2'de aktifleşecek)

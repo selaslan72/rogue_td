@@ -15,6 +15,79 @@ assistant.
 
 ## Current Handoff
 
+### 2026-05-07 — Codex Issue #4 fix (branch `claude/web-progress-fix`)
+
+**GitHub Issue #4 lokal olarak çözüldü.** Henüz commit/push yapılmadı.
+
+- `td_game.dart`: `onLoad()` içinde `await super.onLoad()` kullanıldı.
+- `game_screen.dart`: BAŞLAT butonu `_TopHud` içinden çıkarıldı; oyun
+  `Stack`'i üzerinde bağımsız `_PlacementStartOverlay` olarak render ediliyor.
+  Böylece HUD layout/clip ve ilk build sırası butonu saklayamıyor.
+- Doğrulama:
+  - `flutter analyze` temiz.
+  - `flutter build web` başarılı.
+  - Lokal `build/web` server + in-app browser testi:
+    - Level 1 açıldı.
+    - BAŞLAT butonu alt ortada görünür.
+    - Butona basınca `WAVE 0/12` → `WAVE 1/12`, düşmanlar spawn oluyor.
+    - Browser console error yok.
+
+Sonraki adım: değişiklikleri commit/push edip Issue #4'ü GitHub'da kapat ya da
+PR aç.
+
+### 2026-05-07 — Web progress fix + BAŞLAT bug (branch `claude/web-progress-fix`)
+
+İki commit, branch push'lanmış. **GitHub Issue #4 açık.**
+
+1. **`ee7fead fix: ProgressService web uyumlu (sqflite → SharedPreferences)`** ✅
+   - Önceki commit `26ab06b` (codex) ProgressService'i sqflite'a taşımıştı.
+     Sqflite web'de native çalışmaz, `getDatabasesPath()` exception fırlatıp
+     uygulama açılışta crash oluyordu (beyaz ekran).
+   - SharedPreferences'a geri çevrildi: yıldızlar JSON map (`level_stars_v1`),
+     fragments ayrı int key (`total_fragments_v1`).
+   - API aynı (`setStars`, `addFragments`, `totalFragments`, `reset`).
+   - `pubspec.yaml`'dan `sqflite`, `path`, `path_provider` silindi.
+   - Web açılış sorunu çözüldü, oyun yükleniyor.
+
+2. **`e5396a6 wip: BAŞLAT butonu görünmeme bugı`** ❌ ÇÖZÜLEMEDI
+   - Web'de placement fazında BAŞLAT butonu hiçbir layout düzenlemesinde
+     görünmüyor. 4 deneme yapıldı, hiçbiri çalışmadı:
+     1. `Align(bottomCenter)` padding 64→24
+     2. Stack `Positioned(bottom:24)` doğrudan
+     3. Stack `Positioned(top:8)` doğrudan
+     4. `_TopHud` Container içine wave preview altında
+        `ValueListenableBuilder<bool>(placementPhaseNotifier)` ile
+   - Şu an mevcut hâl: `_TopHud` içinde, hâlâ görünmüyor.
+   - **Issue #4** açıldı, debug ipuçları orada.
+
+### Bir sonraki oturum için (öncelik sırası)
+
+1. **Issue #4 — BAŞLAT bugı debug**
+   - `print()` ekle: `_enterPlacementPhase` öncesi/sonrası
+     `placementPhaseNotifier.value` değeri ne?
+   - `onLoad()` başında `await super.onLoad()` yap (şu an senkron çağrılıyor,
+     `td_game.dart:117`)
+   - Test için **koşulsuz** (her zaman görünen) buton ekle:
+     - Görünüyorsa → sorun `placementPhaseNotifier`'ın true'ya hiç geçmemesi
+     - Görünmüyorsa → sorun layout/clipping/container
+   - `td_game.dart:118` `camera.viewfinder.visibleGameSize` web'de fail
+     ediyor olabilir mi?
+   - Browser DevTools Console'da kırmızı satır var mı kontrol
+
+2. **Ses altyapısı** (önce Issue #4 çözülmeli, oyun oynanmadan ses test
+   edilemez)
+
+3. **Fragment harcama yolu** — kalıcı upgrade ekranı (rune/perk shop)
+
+### Bilinmesi gereken
+- Branch `claude/web-progress-fix` `main` ile merge edilmedi. Issue #4
+  çözülünce ya tek PR olarak açılır ya da fix commit olarak kalır.
+- Kullanıcı web'de oynamaya çalışıyor (Chrome). Android'de test edilmedi —
+  mobilde çalışıyor olabilir; layout ya da sqflite sebebiyle değil de Flame
+  web-spesifik bir bug olabilir.
+
+---
+
 ### 2026-04-29 — Claude oturumu (push'lanmış branch'ler)
 
 Branch'ler `origin`'e push edildi, PR açma kararı kullanıcıya bırakıldı.
