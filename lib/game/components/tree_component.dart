@@ -6,7 +6,7 @@ import 'damageable.dart';
 enum TreeVariant { tree, bush }
 
 /// Dekoratif + dövülebilir engel. `tree` = güçlü tek ağaç (HP 85, slot açar);
-/// `bush` = zayıf çalı (HP 22, altın verir, slot açmaz).
+/// `bush` = zayıf çalı (HP 22, altın verir ve slot açar).
 class TreeComponent extends PositionComponent
     with TapCallbacks
     implements Damageable {
@@ -16,7 +16,7 @@ class TreeComponent extends PositionComponent
   final void Function(TreeComponent tree)? onDestroyed;
   final void Function(TreeComponent tree)? onTap;
 
-  bool get givesSlot => variant == TreeVariant.tree;
+  bool get givesSlot => true;
 
   bool selected = false;
   double _hp;
@@ -31,22 +31,22 @@ class TreeComponent extends PositionComponent
     this.onDestroyed,
     this.onTap,
     double? maxHp,
-  })  : _hp = maxHp ?? (variant == TreeVariant.tree ? 85.0 : 22.0),
-        super(
-          position: worldPosition + Vector2(0, _yOffset(variant, sizeScale)),
-          size: (variant == TreeVariant.tree
-                  ? Vector2(46, 56)
-                  : Vector2(38, 26)) *
-              sizeScale,
-          anchor: Anchor.bottomCenter,
-          priority: -5,
-        );
+  }) : _hp = maxHp ?? (variant == TreeVariant.tree ? 85.0 : 22.0),
+       super(
+         position: worldPosition + Vector2(0, _yOffset(variant, sizeScale)),
+         size:
+             (variant == TreeVariant.tree ? Vector2(46, 56) : Vector2(38, 26)) *
+             sizeScale,
+         anchor: Anchor.bottomCenter,
+         priority: -5,
+       );
 
   /// Hücre merkezinden bottomCenter anchor için offset: ağaç gövdesi cell'in
   /// alt yarısında otursun, taç üst yarıyı kaplasın → "boşluk yok" görünümü.
   static double _yOffset(TreeVariant v, double scale) {
     if (v == TreeVariant.bush) return 12 * scale;
-    return 22 * scale; // 24 (yarım hücre) ~ kadar aşağı, gövde dibi hücre alt sınırına yakın
+    return 22 *
+        scale; // 24 (yarım hücre) ~ kadar aşağı, gövde dibi hücre alt sınırına yakın
   }
 
   @override
@@ -59,7 +59,7 @@ class TreeComponent extends PositionComponent
   bool get isAlive => _hp > 0;
 
   @override
-  Vector2 get worldPosition => position;
+  Vector2 get worldPosition => position - Vector2(0, size.y * 0.45);
 
   @override
   double get bodyRadius =>
@@ -130,20 +130,33 @@ class TreeComponent extends PositionComponent
     // Katmanlı taç — geniş/dolu görünüm için 5 daire
     canvas.drawCircle(Offset(cx, base - h * 0.14), w * 0.56, _leafDarkPaint);
     canvas.drawCircle(
-        Offset(cx + w * 0.14, base - h * 0.24), w * 0.40, _leafDarkPaint);
+      Offset(cx + w * 0.14, base - h * 0.24),
+      w * 0.40,
+      _leafDarkPaint,
+    );
     canvas.drawCircle(
-        Offset(cx - w * 0.14, base - h * 0.24), w * 0.42, _leafDarkPaint);
+      Offset(cx - w * 0.14, base - h * 0.24),
+      w * 0.42,
+      _leafDarkPaint,
+    );
     canvas.drawCircle(Offset(cx, base - h * 0.36), w * 0.48, _leafPaint);
     canvas.drawCircle(
-        Offset(cx - w * 0.08, base - h * 0.50), w * 0.30, _leafLightPaint);
+      Offset(cx - w * 0.08, base - h * 0.50),
+      w * 0.30,
+      _leafLightPaint,
+    );
     canvas.drawCircle(
-        Offset(cx + w * 0.10, base - h * 0.44), w * 0.20, _leafAccentPaint);
+      Offset(cx + w * 0.10, base - h * 0.44),
+      w * 0.20,
+      _leafAccentPaint,
+    );
 
     if (flash > 0) {
       canvas.drawCircle(
         Offset(cx, base - h * 0.32),
         w * 0.58,
-        Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.45 * flash),
+        Paint()
+          ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.45 * flash),
       );
     }
     if (selected) {
@@ -175,15 +188,22 @@ class TreeComponent extends PositionComponent
     canvas.drawCircle(Offset(cx, cy - 2), w * 0.33, _bushMidPaint);
     // Parlak vurgu
     canvas.drawCircle(
-        Offset(cx - w * 0.08, cy - h * 0.38), w * 0.14, _bushLightPaint);
+      Offset(cx - w * 0.08, cy - h * 0.38),
+      w * 0.14,
+      _bushLightPaint,
+    );
     canvas.drawCircle(
-        Offset(cx + w * 0.10, cy - h * 0.28), w * 0.10, _bushLightPaint);
+      Offset(cx + w * 0.10, cy - h * 0.28),
+      w * 0.10,
+      _bushLightPaint,
+    );
 
     if (flash > 0) {
       canvas.drawCircle(
         Offset(cx, cy),
         w * 0.42,
-        Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.45 * flash),
+        Paint()
+          ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.45 * flash),
       );
     }
     if (selected) {

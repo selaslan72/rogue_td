@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import '../data/enemy_registry.dart';
@@ -26,7 +27,7 @@ import 'path_data.dart';
 /// Ana FlameGame. Run state'ini kendi içinde tutar (Riverpod yok).
 /// 12 wave / bölüm, wave 6 mini-boss, wave 12 final boss.
 /// Bölüm tanımı (harita, zorluk multipliers) constructor'dan alınır.
-class TdGame extends FlameGame with HasGameReference {
+class TdGame extends FlameGame with HasGameReference, TapCallbacks {
   // ─── Run state ─────────────────────────────────────────────────────────────
   static const int maxWaves = 12;
   static const int initialLives = 10;
@@ -82,7 +83,6 @@ class TdGame extends FlameGame with HasGameReference {
 
   // Yerleştirme fazı — modifier seçildikten sonra, wave başlamadan önce
   final ValueNotifier<bool> placementPhaseNotifier = ValueNotifier(false);
-
 
   // Obstacle cluster state
   final Map<int, _ObstacleCluster> _clusters = {};
@@ -210,8 +210,8 @@ class TdGame extends FlameGame with HasGameReference {
       final particleColor = obstacle is RockComponent
           ? const Color(0xFFB7BFCB)
           : isBush
-              ? const Color(0xFF48902E)
-              : const Color(0xFF4A8A3A);
+          ? const Color(0xFF48902E)
+          : const Color(0xFF4A8A3A);
       add(
         ParticleEffect(
           worldPosition: cluster.center.clone(),
@@ -221,13 +221,13 @@ class TdGame extends FlameGame with HasGameReference {
         ),
       );
       if (isBush) {
-        // Çalı → slot yok, küçük altın ödülü
+        // Çalılar zayıf olduğu için slotun yanında küçük altın ödülü de verir.
         gold += 8;
         goldNotifier.value = gold;
-      } else {
-        add(TowerSlot(
-            worldPosition: cluster.center.clone(), onTap: _handleSlotTap));
       }
+      add(
+        TowerSlot(worldPosition: cluster.center.clone(), onTap: _handleSlotTap),
+      );
     }
   }
 
@@ -320,6 +320,12 @@ class TdGame extends FlameGame with HasGameReference {
     selectedExistingTowerNotifier.value = null;
   }
 
+  @override
+  void onTapDown(TapDownEvent event) {
+    if (runEnded) return;
+    _clearSelectedExisting();
+  }
+
   void _clearPendingTowerSlot() {
     pendingTowerSlotNotifier.value?.isHighlighted = false;
     pendingTowerSlotNotifier.value = null;
@@ -372,9 +378,7 @@ class TdGame extends FlameGame with HasGameReference {
     // Boss wave'lerde daha geniş aralık; normal wave'lerde wave'le birlikte kısalsın
     _spawnInterval = wave == maxWaves
         ? 2.0
-        : (wave == 6
-              ? 1.8
-              : (1.5 - (wave - 1) * 0.07).clamp(0.55, 1.5));
+        : (wave == 6 ? 1.8 : (1.5 - (wave - 1) * 0.07).clamp(0.55, 1.5));
     _flashMessage(
       wave == maxWaves
           ? 'FINAL BOSS'
@@ -558,9 +562,7 @@ class TdGame extends FlameGame with HasGameReference {
         .map((t) => t.card)
         .toSet()
         .toList();
-    final stars = victory
-        ? RunResult.starsFromLives(lives, initialLives)
-        : 0;
+    final stars = victory ? RunResult.starsFromLives(lives, initialLives) : 0;
     // Fragment: her wave başına 1 baz, yıldız çarpanı eklenir.
     // Yenilgide bile wave ilerlemesi ödüllendirilir (min çarpan 1).
     final fragmentsEarned = wave * (stars > 0 ? stars : 1);
