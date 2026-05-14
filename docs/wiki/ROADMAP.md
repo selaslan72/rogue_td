@@ -137,6 +137,39 @@ Balancing will get harder as content grows:
 - Show a compact run summary for tower performance.
 - Use this data to tune waves, maps, tower costs, and upgrades.
 
+### Professional Presentation And Polish
+
+The project should gradually move from prototype feel toward a more polished
+game presentation:
+
+- Define a consistent visual direction for terrain, paths, towers, obstacles,
+  HUD panels, and popups.
+- Improve map presentation with better path borders, subtle ground texture,
+  clearer build slots, and stronger entrance/exit/castle silhouettes.
+- Polish tower readability with stronger silhouettes, clearer upgrade visuals,
+  refined projectiles, hit flashes, and special effects such as Tesla links.
+- Upgrade HUD and panels so gold, lives, waves, tower picker, and upgrade
+  controls feel like a cohesive game UI rather than debug widgets.
+- Add lightweight feedback animations: tower placement pop, slot unlock,
+  upgrade flash, wave-start banner, gold gain text, and enemy hit/death cues.
+- Add a simple sound pass for placing, firing, hits, gold, upgrades, wave
+  start, victory, and defeat.
+- Choose a font and icon direction that supports Turkish text and reduces
+  reliance on emoji over time.
+- Improve web polish with a loading screen, centered game frame, responsive
+  sizing, and fewer black-screen/blank-start moments.
+- Build a small brand identity: logo/wordmark, palette, UI border style, icon
+  style, and future Spring/Winter seasonal presentation.
+
+Suggested polish priority:
+
+1. UI/HUD polish.
+2. Map/path/slot visual polish.
+3. Tower, projectile, and hit-effect polish.
+4. Placement, upgrade, wave, and reward feedback animations.
+5. Sound pass.
+6. Logo, loading screen, and season theme presentation.
+
 ### Current Context
 
 The game currently has:
