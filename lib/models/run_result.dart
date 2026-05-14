@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'run_modifier.dart';
 import 'tower_card.dart';
 
 @immutable
@@ -10,10 +9,9 @@ class RunResult {
   final int finalGold;
   final int livesLeft;
   final int initialLives;
-  final int stars;        // 0..3
+  final int stars; // 0..3
   final int levelId;
   final String mapName;
-  final RunModifier? modifier;
   final List<TowerCard> towersUsed;
   final int fragmentsEarned;
 
@@ -27,7 +25,6 @@ class RunResult {
     required this.stars,
     required this.levelId,
     required this.mapName,
-    required this.modifier,
     required this.towersUsed,
     required this.fragmentsEarned,
   });
@@ -46,8 +43,7 @@ class RunResult {
   String get shareCard {
     final flag = victory ? '🏆 VICTORY' : '💀 DEFEAT';
     final towers = towersUsed.map((t) => t.icon).join('');
-    final mod = modifier == null ? '' : '\n${modifier!.icon} ${modifier!.name}';
     final starStr = '★' * stars + '☆' * (3 - stars);
-    return '$flag\nBölüm $levelId — $mapName\nWave $waveReached / $totalWaves\n$starStr\nTowers: $towers$mod\n+$fragmentsEarned 💎\n#RogueTD';
+    return '$flag\nBölüm $levelId — $mapName\nWave $waveReached / $totalWaves\n$starStr\nTowers: $towers\n+$fragmentsEarned 💎\n#RogueTD';
   }
 }

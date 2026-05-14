@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
-import '../../models/run_stats.dart';
 import '../../models/tower_card.dart';
 import '../td_game.dart';
 import 'damageable.dart';
@@ -20,7 +19,6 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   final TowerCard card;
   TargetingMode targeting;
   final void Function(TowerComponent) onTap;
-  final RunStats stats;
   final TowerSlot slot;
 
   int level = 1; // 1..3
@@ -79,15 +77,9 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   double get _rangeMul => 1.0 + (level - 1) * 0.10;
   double get _fireRateMul => 1.0 + (level - 1) * 0.20;
 
-  double get currentDamage =>
-      card.damage *
-      _damageMul *
-      stats.damageMul *
-      stats.towerDamageMul(card.id);
-  double get currentRange =>
-      card.range * _rangeMul * stats.rangeMul * stats.towerRangeMul(card.id);
-  double get currentFireRate =>
-      card.fireRate * _fireRateMul * stats.fireRateMul;
+  double get currentDamage => card.damage * _damageMul;
+  double get currentRange => card.range * _rangeMul;
+  double get currentFireRate => card.fireRate * _fireRateMul;
 
   bool get canUpgrade => level < 3;
   int get upgradeCost => (card.baseCost * (level == 1 ? 1.0 : 1.5)).round();
@@ -101,7 +93,6 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     required this.card,
     required Vector2 worldPosition,
     required this.onTap,
-    required this.stats,
     required this.slot,
     this.targeting = TargetingMode.first,
   }) : super(

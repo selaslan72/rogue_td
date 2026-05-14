@@ -20,18 +20,21 @@ visually fresh.
 
 ### Recommended Architecture
 
-Use a **map layout pool + rotation** instead of hand-drawing 30 completely
-unique maps immediately.
+Use a **real map expansion plan** instead of simply rotating the current 6
+maps.
 
-- Create roughly **10-12 reusable map layouts**.
-- Spring Mode uses these layouts across 30 levels with increasing difficulty,
-  enemy composition changes, and level multipliers.
-- Winter Mode can reuse the same layout pool at first, but render it through a
-  winter theme: snow ground, pine trees, icy rocks, colder path colors, and
-  season-specific decoration.
+- Spring Mode should give players new layouts as they progress toward 30
+  levels. Reusing a small set of maps in rotation is not enough for the player
+  experience.
+- Create new map layouts in batches, starting with enough fresh layouts to make
+  the expanded Spring campaign feel meaningfully larger than the current 6-map
+  MVP.
+- Winter Mode can reuse some proven layout concepts at first, but should still
+  feel like a distinct campaign through snowy visuals, pine trees, icy rocks,
+  colder path colors, and season-specific decoration.
 
-This keeps content production realistic while still giving players 30 levels
-per season.
+This keeps content production focused on player-facing variety rather than only
+data scaling.
 
 ### Mode Selection
 
@@ -47,6 +50,9 @@ Initial design options:
 The simpler first implementation is a main mode selector before the level
 select screen.
 
+Level naming should stay simple for the MVP: players advance through numbered
+levels (`1`, `2`, `3`, ...), without unique map names shown in the UI.
+
 ### Progression Rules To Decide
 
 - Whether Winter unlocks after all 30 Spring levels, after a star threshold, or
@@ -60,22 +66,76 @@ select screen.
 
 1. **Data model:** add a `Season` or `GameMode` field and make level registry
    season-aware.
-2. **Map pool:** expand from 6 layouts toward 10-12 reusable layouts.
-3. **Spring campaign:** generate/register 30 Spring levels using the layout
-   pool and scaling.
-4. **Mode UI:** add Spring/Winter selector and season-aware level select.
-5. **Winter theme:** add winter palette and winter obstacle/decor variants.
-6. **Winter campaign:** register 30 Winter levels, initially reusing layouts
-   with winter visuals and harder scaling.
+2. **Progress keys:** make saved stars season-aware so `Spring 1` and
+   `Winter 1` cannot collide.
+3. **Map expansion:** create new Spring map layouts instead of rotating only
+   the current 6 maps.
+4. **Spring campaign:** register 30 numbered Spring levels using the expanded
+   map set and difficulty scaling.
+5. **Mode UI:** add Spring/Winter selector and season-aware level select.
+6. **Winter theme:** add winter palette and winter obstacle/decor variants.
+7. **Winter campaign:** register 30 Winter levels with winter visuals and
+   harder scaling.
 
 ### Open Design Questions
 
-- Should each level have a unique name, or should names follow season + number
-  at first?
 - Should Winter be locked from the start?
 - Should Winter introduce new enemy modifiers or only visual changes in the
   first version?
 - Should the game eventually support more seasons after Winter?
+
+Resolved for MVP:
+
+- Levels are displayed as simple numbers, not unique map names.
+- Spring 30 should include new map layouts; rotating the current 6 maps is not
+  acceptable as the main content plan.
+
+## Near-Term Contribution Tracks
+
+### Developer Testing Tools
+
+Speed up development and balance passes with debug-only tools:
+
+- Unlock all levels in local/debug runs.
+- Add a debug HUD for gold, wave skip, lives, and quick enemy spawn tests.
+- Add a map preview/test entry point so layouts can be inspected quickly.
+- Keep these tools out of release builds.
+
+### Spring Map Expansion
+
+The next major content step is adding new Spring layouts:
+
+- Add fresh path shapes instead of reusing the current 6 maps.
+- Vary slot placement, obstacle density, and clearing pressure per map.
+- Expand in small batches so each batch can be tested and balanced.
+
+### Tower Identity Pass
+
+Each tower should have a memorable gameplay identity:
+
+- Archer: long range, precision, or crit-style behavior.
+- Cannon: splash pressure and armor-breaking role.
+- Frost: area control and slow tuning.
+- Flame: damage-over-time and crowd pressure.
+- Tesla: chain lightning plus network/link synergy.
+- Barracks: blocking, soldier positioning, and lane control.
+
+### Roguelike Run Variety
+
+Runs should feel less repetitive over time:
+
+- Make wave rewards and modifiers more meaningful.
+- Add risk/reward choices.
+- Consider relic-like run bonuses that change tower behavior.
+- Keep choices readable and fast between waves.
+
+### Balance And Telemetry
+
+Balancing will get harder as content grows:
+
+- Track per-tower damage or contribution during a run.
+- Show a compact run summary for tower performance.
+- Use this data to tune waves, maps, tower costs, and upgrades.
 
 ### Current Context
 

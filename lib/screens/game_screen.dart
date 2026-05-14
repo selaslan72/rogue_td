@@ -7,7 +7,6 @@ import '../game/components/tower_component.dart';
 import '../game/td_game.dart';
 import '../models/enemy_def.dart';
 import '../models/level_def.dart';
-import '../models/run_modifier.dart';
 import '../models/run_result.dart';
 import '../models/tower_card.dart';
 import '../services/progress_service.dart';
@@ -49,7 +48,6 @@ class _GameScreenState extends State<GameScreen> {
                   Positioned.fill(child: _SlotTowerPickerOverlay(game: _game)),
                   Positioned.fill(child: _UpgradeOverlay(game: _game)),
                   Positioned.fill(child: _WaveRewardOverlay(game: _game)),
-                  Positioned.fill(child: _ModifierSelectOverlay(game: _game)),
                   Positioned.fill(child: _RunResultOverlay(game: _game)),
                   Positioned.fill(child: _PlacementStartOverlay(game: _game)),
                   Positioned(
@@ -66,7 +64,6 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 }
-
 
 class _SlotTowerPickerOverlay extends StatelessWidget {
   final TdGame game;
@@ -837,107 +834,6 @@ class _TowerSelector extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Modifier Seçim Overlay'i — run başında 3 modifier sun.
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ModifierSelectOverlay extends StatelessWidget {
-  final TdGame game;
-  const _ModifierSelectOverlay({required this.game});
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<List<RunModifier>?>(
-      valueListenable: game.modifierSelectNotifier,
-      builder: (_, mods, _) {
-        if (mods == null) return const SizedBox.shrink();
-        return Container(
-          color: const Color(0xE6000000),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'NEW RUN',
-                    style: TextStyle(
-                      color: Color(0xFFFBBF24),
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 3,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Map: ${game.currentMap.name}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Choose a Modifier',
-                    style: TextStyle(color: Colors.white54, fontSize: 13),
-                  ),
-                  const SizedBox(height: 20),
-                  ...mods.map((m) => _ModifierOption(game: game, mod: m)),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ModifierOption extends StatelessWidget {
-  final TdGame game;
-  final RunModifier mod;
-  const _ModifierOption({required this.game, required this.mod});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => game.pickModifier(mod),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFFBBF24), width: 1.5),
-        ),
-        child: Row(
-          children: [
-            Text(mod.icon, style: const TextStyle(fontSize: 30)),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    mod.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    mod.description,
-                    style: const TextStyle(color: Colors.white60, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Run Result Overlay'i — run bitince sonuç + paylaş + yeni run.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -980,7 +876,9 @@ class _RunResultOverlay extends StatelessWidget {
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: Icon(
-                          filled ? Icons.star_rounded : Icons.star_border_rounded,
+                          filled
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
                           color: filled
                               ? const Color(0xFFFBBF24)
                               : Colors.white24,
@@ -1015,12 +913,6 @@ class _RunResultOverlay extends StatelessWidget {
                           label: 'Final Gold',
                           value: '💰 ${result.finalGold}',
                         ),
-                        if (result.modifier != null)
-                          _ResultRow(
-                            label: 'Modifier',
-                            value:
-                                '${result.modifier!.icon} ${result.modifier!.name}',
-                          ),
                         _ResultRow(
                           label: 'Fragments',
                           value: '+${result.fragmentsEarned} 💎',
@@ -1067,7 +959,8 @@ class _ResultActions extends StatelessWidget {
     final nextLevel = LevelRegistry.all
         .where((l) => l.id == result.levelId + 1)
         .firstOrNull;
-    final canAdvance = result.victory &&
+    final canAdvance =
+        result.victory &&
         nextLevel != null &&
         ProgressService.instance.isUnlocked(nextLevel.starsRequired);
 
@@ -1113,7 +1006,9 @@ class _ResultActions extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: canAdvance ? () => game.startLevel(nextLevel) : game.restartLevel,
+            onPressed: canAdvance
+                ? () => game.startLevel(nextLevel)
+                : game.restartLevel,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFBBF24),
               foregroundColor: Colors.black,
@@ -1149,9 +1044,7 @@ class _SpeedButton extends StatelessWidget {
           height: 40,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isFast
-                ? const Color(0xCCFBBF24)
-                : const Color(0xAA1A1A2E),
+            color: isFast ? const Color(0xCCFBBF24) : const Color(0xAA1A1A2E),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isFast ? const Color(0xFFFBBF24) : Colors.white30,

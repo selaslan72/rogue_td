@@ -8,9 +8,7 @@ import '../data/enemy_registry.dart';
 import '../data/tower_registry.dart';
 import '../models/enemy_def.dart';
 import '../models/level_def.dart';
-import '../models/run_modifier.dart';
 import '../models/run_result.dart';
-import '../models/run_stats.dart';
 import '../models/tower_card.dart';
 import '../services/progress_service.dart';
 import 'components/castle_component.dart';
@@ -45,8 +43,6 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
   bool runEnded = false;
 
   GameMap get currentMap => level.map;
-  RunModifier? activeModifier;
-  final RunStats stats = RunStats();
   final List<TowerCard> unlockedTowers = List.from(TowerRegistry.all);
 
   // ─── Notifier'lar (UI'ya yansır) ──────────────────────────────────────────
@@ -74,14 +70,10 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
   final ValueNotifier<List<TowerComponent>?> upgradePickNotifier =
       ValueNotifier(null);
 
-  // Run başı modifier seçimi (3 RunModifier)
-  final ValueNotifier<List<RunModifier>?> modifierSelectNotifier =
-      ValueNotifier(null);
-
   // Run sonu sonuç overlay'i
   final ValueNotifier<RunResult?> runResultNotifier = ValueNotifier(null);
 
-  // Yerleştirme fazı — modifier seçildikten sonra, wave başlamadan önce
+  // Yerleştirme fazı — wave başlamadan önce
   final ValueNotifier<bool> placementPhaseNotifier = ValueNotifier(false);
 
   // Obstacle cluster state
@@ -290,7 +282,6 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
         card: card,
         worldPosition: slot.position,
         onTap: _handleTowerTap,
-        stats: stats,
         slot: slot,
       ),
     );
@@ -408,7 +399,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
       result.addAll(List.filled(3, EnemyRegistry.tank));
       return result;
     }
-    final base = ((8 + w * 2) * stats.enemyCountMul).round();
+    final base = 8 + w * 2;
     for (int i = 0; i < base; i++) {
       EnemyDef pick;
       if (w >= 7 && i % 4 == 0) {
@@ -478,17 +469,15 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
         waypoints: currentMap.waypoints,
         onKilled: _onEnemyKilled,
         onLeaked: _onEnemyLeaked,
-        hpMultiplier: stats.enemyHpMul * waveHpScale * level.hpMul,
-        speedMultiplier: stats.enemySpeedMul * waveSpeedScale * level.speedMul,
-        armorBonus: stats.enemyArmorBonus,
+        hpMultiplier: waveHpScale * level.hpMul,
+        speedMultiplier: waveSpeedScale * level.speedMul,
       ),
     );
     waveEnemiesRemaining = _waveQueue.length;
   }
 
   void _onEnemyKilled(EnemyComponent enemy) {
-    final reward = (enemy.def.goldReward * stats.goldMul).round();
-    gold += reward;
+    gold += enemy.def.goldReward;
     goldNotifier.value = gold;
   }
 
@@ -524,24 +513,6 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     upgradePickNotifier.value = null;
     resumeEngine();
     if (!runEnded && lives > 0) startNextWave();
-  }
-
-  // ─── Modifier (şu an devre dışı, _enterPlacementPhase doğrudan başlatır) ──
-
-  void pickModifier(RunModifier mod) {
-    activeModifier = mod;
-    stats.reset();
-    stats.apply(mod);
-
-    // Tek seferlik etkiler
-    if (mod.kind == ModifierKind.startingGold) {
-      gold = initialGold + mod.value.round();
-      goldNotifier.value = gold;
-    }
-
-    modifierSelectNotifier.value = null;
-    resumeEngine();
-    placementPhaseNotifier.value = true;
   }
 
   /// Oyuncu tower kurumunu bitirip START'a bastığında çağrılır.
@@ -581,14 +552,13 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
       stars: stars,
       levelId: level.id,
       mapName: currentMap.name,
-      modifier: activeModifier,
       towersUsed: towers,
       fragmentsEarned: fragmentsEarned,
     );
     pauseEngine();
   }
 
-  /// Aynı bölümü baştan başlat (yeni modifier seçimi açılır).
+  /// Aynı bölümü baştan başlat.
   void restartLevel() => _resetForLevel(level);
 
   /// Farklı bir bölüme geç.
@@ -600,7 +570,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     startNewRun();
   }
 
-  /// Yeni run: harita + state tamamen sıfırlanır, yeni modifier seçimi açılır.
+  /// Yeni run: harita + state tamamen sıfırlanır.
   void startNewRun() {
     // State sıfırla
     runEnded = false;
@@ -621,8 +591,6 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     upgradePickNotifier.value = null;
     placementPhaseNotifier.value = false;
 
-    activeModifier = null;
-    stats.reset();
     unlockedTowers
       ..clear()
       ..addAll(TowerRegistry.all);
@@ -638,11 +606,8 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     _enterPlacementPhase();
   }
 
-  /// Modifier seçimi atlandı — placement fazına direkt geç. RunStats sıfır
-  /// kalır (hiçbir modifier uygulanmaz).
+  /// Placement fazına geç.
   void _enterPlacementPhase() {
-    activeModifier = null;
-    stats.reset();
     placementPhaseNotifier.value = true;
   }
 
