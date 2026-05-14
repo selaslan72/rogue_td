@@ -30,6 +30,9 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   Damageable? _currentTarget;
   double _muzzleFlash = 0;
 
+  static const int _teslaMaxLinks = 3;
+  static const double _teslaDamageBonusPerLink = 0.10;
+
   late final Paint _bodyPaint;
   late final Paint _accentPaint;
   late final Paint _strokePaint;
@@ -59,8 +62,11 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   // Barracks state — 3 asker slot'u, her biri ya canlı ya respawn cooldown'da
   static const int _barracksCount = 3;
   static const double _barracksRespawn = 3.0;
-  final List<SoldierComponent?> _soldiers =
-      List<SoldierComponent?>.filled(_barracksCount, null, growable: false);
+  final List<SoldierComponent?> _soldiers = List<SoldierComponent?>.filled(
+    _barracksCount,
+    null,
+    growable: false,
+  );
   final List<double> _soldierRespawn = List<double>.filled(_barracksCount, 0);
   bool _barracksSpawned = false;
 
@@ -85,6 +91,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
 
   bool get canUpgrade => level < 3;
   int get upgradeCost => (card.baseCost * (level == 1 ? 1.0 : 1.5)).round();
+  bool get _isTesla => card.id == 'tesla';
 
   void upgrade() {
     if (canUpgrade) level++;
@@ -179,10 +186,8 @@ class TowerComponent extends PositionComponent with TapCallbacks {
       }
     }
     // Aksi halde düşman targeting (otomatik obstacle saldırısı yok).
-    final enemies = parent?.children
-            .whereType<EnemyComponent>()
-            .where(_inRange)
-            .toList() ??
+    final enemies =
+        parent?.children.whereType<EnemyComponent>().where(_inRange).toList() ??
         [];
     if (enemies.isEmpty) return null;
     switch (targeting) {
@@ -198,9 +203,9 @@ class TowerComponent extends PositionComponent with TapCallbacks {
         return enemies.reduce(
           (a, b) =>
               a.worldPosition.distanceTo(position) <
-                      b.worldPosition.distanceTo(position)
-                  ? a
-                  : b,
+                  b.worldPosition.distanceTo(position)
+              ? a
+              : b,
         );
     }
   }
@@ -220,24 +225,28 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     if (target is! EnemyComponent) {
       switch (card.type) {
         case TowerType.singleTarget:
-          parent?.add(ProjectileComponent(
-            worldPosition: position.clone(),
-            target: target,
-            damage: currentDamage,
-            color: card.color,
-            visual: ProjectileVisual.arrow,
-            speed: 360,
-          ));
+          parent?.add(
+            ProjectileComponent(
+              worldPosition: position.clone(),
+              target: target,
+              damage: currentDamage,
+              color: card.color,
+              visual: ProjectileVisual.arrow,
+              speed: 360,
+            ),
+          );
         case TowerType.splash:
-          parent?.add(ProjectileComponent(
-            worldPosition: position.clone(),
-            target: target,
-            damage: currentDamage,
-            color: card.color,
-            visual: ProjectileVisual.ball,
-            speed: 240,
-            splashRadius: 60,
-          ));
+          parent?.add(
+            ProjectileComponent(
+              worldPosition: position.clone(),
+              target: target,
+              damage: currentDamage,
+              color: card.color,
+              visual: ProjectileVisual.ball,
+              speed: 240,
+              splashRadius: 60,
+            ),
+          );
         default:
           target.takeDamage(currentDamage);
           _spawnHit(target.worldPosition.clone());
@@ -269,42 +278,54 @@ class TowerComponent extends PositionComponent with TapCallbacks {
           ),
         );
       case TowerType.slow:
-        parent?.add(ProjectileComponent(
-          worldPosition: position.clone(),
-          target: target,
-          damage: currentDamage,
-          color: card.color,
-          visual: ProjectileVisual.iceShard,
-          speed: 270,
-          slowAmount: 0.5,
-          slowDuration: 1.5,
-          impactRadius: 14,
-        ));
+        parent?.add(
+          ProjectileComponent(
+            worldPosition: position.clone(),
+            target: target,
+            damage: currentDamage,
+            color: card.color,
+            visual: ProjectileVisual.iceShard,
+            speed: 270,
+            slowAmount: 0.5,
+            slowDuration: 1.5,
+            impactRadius: 14,
+          ),
+        );
       case TowerType.damageOverTime:
-        parent?.add(ProjectileComponent(
-          worldPosition: position.clone(),
-          target: target,
-          damage: currentDamage,
-          color: card.color,
-          visual: ProjectileVisual.fireball,
-          speed: 210,
-          impactRadius: 16,
-        ));
+        parent?.add(
+          ProjectileComponent(
+            worldPosition: position.clone(),
+            target: target,
+            damage: currentDamage,
+            color: card.color,
+            visual: ProjectileVisual.fireball,
+            speed: 210,
+            impactRadius: 16,
+          ),
+        );
       case TowerType.chain:
-        // Tesla = 2 zincir, default 2
-        final chainCount = card.id == 'lightning' || card.id == 'frost-king'
-            ? 3
-            : 2;
-        target.takeDamage(currentDamage);
+        final teslaLinks = _isTesla ? _linkedTeslaTowers() : <TowerComponent>[];
+        final linkedDamageMul =
+            1.0 +
+            math.min(teslaLinks.length, _teslaMaxLinks) *
+                _teslaDamageBonusPerLink;
+        final damage = currentDamage * linkedDamageMul;
+        _spawnTeslaLinkArcs(teslaLinks);
+
+        // Tesla'nın mevcut chain kimliğini koru; link bonusu hasarı besler.
+        final chainCount = card.id == 'frost-king' ? 3 : 2;
+        target.takeDamage(damage);
         _spawnHit(target.worldPosition.clone());
-        parent?.add(LightningArc(
-          from: position.clone(),
-          to: target.worldPosition.clone(),
-          color: card.color,
-          seed: DateTime.now().millisecondsSinceEpoch,
-        ));
+        parent?.add(
+          LightningArc(
+            from: position.clone(),
+            to: target.worldPosition.clone(),
+            color: card.color,
+            seed: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
         var lastHit = target;
-        var dmg = currentDamage * 0.7;
+        var dmg = damage * 0.7;
         final hit = <EnemyComponent>{target};
         for (int i = 1; i < chainCount; i++) {
           final next = _findChainNext(lastHit, hit);
@@ -312,12 +333,14 @@ class TowerComponent extends PositionComponent with TapCallbacks {
           next.takeDamage(dmg);
           if (card.id == 'frost-king') next.applySlow(0.4, 1.2);
           _spawnHit(next.worldPosition.clone());
-          parent?.add(LightningArc(
-            from: lastHit.worldPosition.clone(),
-            to: next.worldPosition.clone(),
-            color: card.color,
-            seed: DateTime.now().millisecondsSinceEpoch + i,
-          ));
+          parent?.add(
+            LightningArc(
+              from: lastHit.worldPosition.clone(),
+              to: next.worldPosition.clone(),
+              color: card.color,
+              seed: DateTime.now().millisecondsSinceEpoch + i,
+            ),
+          );
           hit.add(next);
           lastHit = next;
           dmg *= 0.7;
@@ -425,6 +448,43 @@ class TowerComponent extends PositionComponent with TapCallbacks {
       }
     }
     return best;
+  }
+
+  List<TowerComponent> _linkedTeslaTowers() {
+    if (!_isTesla) return const [];
+    final towers = parent?.children.whereType<TowerComponent>() ?? [];
+    final linked = <TowerComponent>[];
+    for (final tower in towers) {
+      if (identical(tower, this)) continue;
+      if (!tower.isMounted || !tower._isTesla) continue;
+      final distance = tower.position.distanceTo(position);
+      if (distance <= currentRange && distance <= tower.currentRange) {
+        linked.add(tower);
+      }
+    }
+    linked.sort(
+      (a, b) => a.position
+          .distanceTo(position)
+          .compareTo(b.position.distanceTo(position)),
+    );
+    return linked.take(_teslaMaxLinks).toList(growable: false);
+  }
+
+  void _spawnTeslaLinkArcs(List<TowerComponent> linkedTowers) {
+    if (linkedTowers.isEmpty) return;
+    final arcColor = Color.lerp(card.color, Colors.white, 0.25) ?? card.color;
+    final seedBase = DateTime.now().millisecondsSinceEpoch;
+    for (int i = 0; i < linkedTowers.length; i++) {
+      parent?.add(
+        LightningArc(
+          from: position.clone(),
+          to: linkedTowers[i].position.clone(),
+          color: arcColor,
+          duration: 0.12,
+          seed: seedBase + 100 + i,
+        ),
+      );
+    }
   }
 
   double _aimAngle() {
@@ -779,21 +839,20 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     final crenW = w / (crenN * 2 - 1);
     for (int i = 0; i < crenN; i++) {
       final cx = left + i * crenW * 2;
-      canvas.drawRect(
-        Rect.fromLTWH(cx, top - 2.5, crenW, 2.5),
-        _bodyPaint,
-      );
-      canvas.drawRect(
-        Rect.fromLTWH(cx, top - 2.5, crenW, 2.5),
-        _strokePaint,
-      );
+      canvas.drawRect(Rect.fromLTWH(cx, top - 2.5, crenW, 2.5), _bodyPaint);
+      canvas.drawRect(Rect.fromLTWH(cx, top - 2.5, crenW, 2.5), _strokePaint);
     }
 
     // Kapı
     final gateW = lvl == 3 ? 5.0 : 6.0;
     final gateH = h * 0.6;
     final gateRect = RRect.fromRectAndCorners(
-      Rect.fromLTWH(center.dx - gateW / 2, center.dy + h / 2 - gateH + 1, gateW, gateH),
+      Rect.fromLTWH(
+        center.dx - gateW / 2,
+        center.dy + h / 2 - gateH + 1,
+        gateW,
+        gateH,
+      ),
       topLeft: const Radius.circular(3),
       topRight: const Radius.circular(3),
     );
@@ -802,10 +861,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     // Bayrak (L2+)
     if (lvl >= 2) {
       final poleX = center.dx + w / 2 - 2;
-      canvas.drawRect(
-        Rect.fromLTWH(poleX, top - 7, 0.8, 7),
-        _darkPaint,
-      );
+      canvas.drawRect(Rect.fromLTWH(poleX, top - 7, 0.8, 7), _darkPaint);
       final flag = Path()
         ..moveTo(poleX + 0.8, top - 7)
         ..lineTo(poleX + 5.5, top - 5.5)
