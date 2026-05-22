@@ -957,7 +957,7 @@ class _ResultActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nextLevel = LevelRegistry.all
-        .where((l) => l.id == result.levelId + 1)
+        .where((l) => l.season == result.season && l.id == result.levelId + 1)
         .firstOrNull;
     final canAdvance =
         result.victory &&
@@ -1035,27 +1035,30 @@ class _SpeedButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: game.speedUpNotifier,
-      builder: (_, isFast, _) => GestureDetector(
+    return ValueListenableBuilder<double>(
+      valueListenable: game.speedNotifier,
+      builder: (_, speed, _) => GestureDetector(
         onTap: game.toggleSpeed,
         child: Container(
           width: 40,
           height: 40,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isFast ? const Color(0xCCFBBF24) : const Color(0xAA1A1A2E),
+            color: speed > 1.0
+                ? const Color(0xCCFBBF24)
+                : const Color(0xAA1A1A2E),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isFast ? const Color(0xFFFBBF24) : Colors.white30,
+              color: speed > 1.0 ? const Color(0xFFFBBF24) : Colors.white30,
               width: 1.2,
             ),
           ),
           child: Text(
-            isFast ? '⏩' : '▶',
+            '${speed.toStringAsFixed(speed == speed.roundToDouble() ? 0 : 1)}x',
             style: TextStyle(
-              fontSize: 18,
-              color: isFast ? Colors.white : Colors.white70,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: speed > 1.0 ? Colors.white : Colors.white70,
             ),
           ),
         ),

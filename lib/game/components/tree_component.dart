@@ -3,7 +3,7 @@ import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 import 'damageable.dart';
 
-enum TreeVariant { tree, bush }
+enum TreeVariant { tree, bush, snowPine, snowBush }
 
 /// Dekoratif + dövülebilir engel. `tree` = güçlü tek ağaç (HP 85, slot açar);
 /// `bush` = zayıf çalı (HP 22, altın verir ve slot açar).
@@ -31,11 +31,17 @@ class TreeComponent extends PositionComponent
     this.onDestroyed,
     this.onTap,
     double? maxHp,
-  }) : _hp = maxHp ?? (variant == TreeVariant.tree ? 85.0 : 22.0),
+  }) : _hp =
+           maxHp ??
+           (variant == TreeVariant.bush || variant == TreeVariant.snowBush
+               ? 22.0
+               : 85.0),
        super(
          position: worldPosition + Vector2(0, _yOffset(variant, sizeScale)),
          size:
-             (variant == TreeVariant.tree ? Vector2(46, 56) : Vector2(38, 26)) *
+             (variant == TreeVariant.bush || variant == TreeVariant.snowBush
+                 ? Vector2(38, 26)
+                 : Vector2(46, 56)) *
              sizeScale,
          anchor: Anchor.bottomCenter,
          priority: -5,
@@ -44,7 +50,7 @@ class TreeComponent extends PositionComponent
   /// Hücre merkezinden bottomCenter anchor için offset: ağaç gövdesi cell'in
   /// alt yarısında otursun, taç üst yarıyı kaplasın → "boşluk yok" görünümü.
   static double _yOffset(TreeVariant v, double scale) {
-    if (v == TreeVariant.bush) return 12 * scale;
+    if (v == TreeVariant.bush || v == TreeVariant.snowBush) return 12 * scale;
     return 22 *
         scale; // 24 (yarım hücre) ~ kadar aşağı, gövde dibi hücre alt sınırına yakın
   }
@@ -63,7 +69,10 @@ class TreeComponent extends PositionComponent
 
   @override
   double get bodyRadius =>
-      (variant == TreeVariant.tree ? 22.0 : 18.0) * sizeScale;
+      (variant == TreeVariant.bush || variant == TreeVariant.snowBush
+          ? 18.0
+          : 22.0) *
+      sizeScale;
 
   @override
   void takeDamage(double amount) {
@@ -95,12 +104,30 @@ class TreeComponent extends PositionComponent
   static final _bushMidPaint = Paint()..color = const Color(0xFF2E6B1E);
   static final _bushLightPaint = Paint()..color = const Color(0xFF48902E);
 
+  // ── Winter paints ──────────────────────────────────────────────────────────
+  static final _pineDarkPaint = Paint()..color = const Color(0xFF12363D);
+  static final _pinePaint = Paint()..color = const Color(0xFF1F5B63);
+  static final _pineLightPaint = Paint()..color = const Color(0xFF2D7C86);
+  static final _snowPaint = Paint()..color = const Color(0xFFF4FBFF);
+  static final _snowShadePaint = Paint()..color = const Color(0xFFCFE1EC);
+  static final _snowBushPaint = Paint()..color = const Color(0xFFB8CCD8);
+  static final _snowBushDarkPaint = Paint()..color = const Color(0xFF708B9C);
+
   @override
   void render(Canvas canvas) {
-    if (variant == TreeVariant.bush) {
-      _renderBush(canvas);
-    } else {
-      _renderTree(canvas);
+    switch (variant) {
+      case TreeVariant.bush:
+        _renderBush(canvas);
+        break;
+      case TreeVariant.snowPine:
+        _renderSnowPine(canvas);
+        break;
+      case TreeVariant.snowBush:
+        _renderSnowBush(canvas);
+        break;
+      case TreeVariant.tree:
+        _renderTree(canvas);
+        break;
     }
   }
 
@@ -196,6 +223,103 @@ class TreeComponent extends PositionComponent
       Offset(cx + w * 0.10, cy - h * 0.28),
       w * 0.10,
       _bushLightPaint,
+    );
+
+    if (flash > 0) {
+      canvas.drawCircle(
+        Offset(cx, cy),
+        w * 0.42,
+        Paint()
+          ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.45 * flash),
+      );
+    }
+    if (selected) {
+      canvas.drawCircle(
+        Offset(cx, cy),
+        w * 0.48,
+        Paint()
+          ..color = const Color(0xFFFBBF24)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.8,
+      );
+    }
+  }
+
+  void _renderSnowPine(Canvas canvas) {
+    final w = size.x;
+    final h = size.y;
+    final flash = _hitFlash.clamp(0.0, 1.0);
+    final cx = w / 2;
+
+    final trunkW = w * 0.18;
+    canvas.drawRect(
+      Rect.fromLTWH((w - trunkW) / 2, h * 0.72, trunkW, h * 0.25),
+      _trunkShadowPaint,
+    );
+
+    void branch(double top, double width, Paint paint) {
+      final path = Path()
+        ..moveTo(cx, top)
+        ..lineTo(cx - width / 2, top + h * 0.25)
+        ..lineTo(cx + width / 2, top + h * 0.25)
+        ..close();
+      canvas.drawPath(path, paint);
+      canvas.drawLine(
+        Offset(cx - width * 0.32, top + h * 0.18),
+        Offset(cx + width * 0.26, top + h * 0.12),
+        _snowPaint..strokeWidth = 3,
+      );
+    }
+
+    branch(h * 0.05, w * 0.58, _pineLightPaint);
+    branch(h * 0.22, w * 0.82, _pinePaint);
+    branch(h * 0.42, w * 1.02, _pineDarkPaint);
+
+    if (flash > 0) {
+      canvas.drawCircle(
+        Offset(cx, h * 0.46),
+        w * 0.56,
+        Paint()
+          ..color = const Color(0xFFFFFFFF).withValues(alpha: 0.45 * flash),
+      );
+    }
+    if (selected) {
+      canvas.drawCircle(
+        Offset(cx, h * 0.48),
+        w * 0.62,
+        Paint()
+          ..color = const Color(0xFFFBBF24)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0,
+      );
+    }
+  }
+
+  void _renderSnowBush(Canvas canvas) {
+    final w = size.x;
+    final h = size.y;
+    final flash = _hitFlash.clamp(0.0, 1.0);
+    final cx = w / 2;
+    final cy = h * 0.55;
+
+    canvas.drawCircle(Offset(cx - w * 0.24, cy), w * 0.32, _snowBushDarkPaint);
+    canvas.drawCircle(Offset(cx + w * 0.23, cy), w * 0.30, _snowBushDarkPaint);
+    canvas.drawCircle(Offset(cx, cy - h * 0.08), w * 0.35, _snowBushPaint);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(cx, cy - h * 0.28),
+        width: w * 0.72,
+        height: h * 0.34,
+      ),
+      _snowPaint,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(cx + w * 0.10, cy - h * 0.18),
+        width: w * 0.36,
+        height: h * 0.18,
+      ),
+      _snowShadePaint,
     );
 
     if (flash > 0) {

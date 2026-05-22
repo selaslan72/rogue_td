@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../data/level_registry.dart';
+import '../models/game_season.dart';
 import '../models/level_def.dart';
 import '../services/progress_service.dart';
 import 'game_screen.dart';
@@ -13,6 +15,8 @@ class LevelSelectScreen extends StatefulWidget {
 }
 
 class _LevelSelectScreenState extends State<LevelSelectScreen> {
+  GameSeason _season = GameSeason.spring;
+
   @override
   void initState() {
     super.initState();
@@ -23,11 +27,9 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
   }
 
   Future<void> _open(LevelDef level) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => GameScreen(level: level),
-      ),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => GameScreen(level: level)));
     if (mounted) setState(() {}); // dönüşte yıldız sayısı yenilensin
   }
 
@@ -35,7 +37,9 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
   Widget build(BuildContext context) {
     final progress = ProgressService.instance;
     final total = progress.totalStars;
-    final maxStars = LevelRegistry.all.length * 3;
+    final levels = LevelRegistry.allFor(_season);
+    final maxStars = levels.length * 3;
+    final targetLevels = LevelRegistry.targetCountFor(_season);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A14),
@@ -56,14 +60,22 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                 ),
               ),
               const SizedBox(height: 8),
+              _SeasonPicker(
+                selected: _season,
+                onSelected: (season) => setState(() => _season = season),
+              ),
+              const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.star_rounded,
-                      color: Color(0xFFFBBF24), size: 22),
+                  const Icon(
+                    Icons.star_rounded,
+                    color: Color(0xFFFBBF24),
+                    size: 22,
+                  ),
                   const SizedBox(width: 4),
                   Text(
-                    '$total / $maxStars',
+                    '${_season.label}  $total / $maxStars',
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 16,
@@ -72,15 +84,27 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 6),
+              Text(
+                '${levels.length} / $targetLevels bölüm hazır',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white38, fontSize: 12),
+              ),
               const SizedBox(height: 24),
               Expanded(
-                child: ListView.separated(
-                  itemCount: LevelRegistry.all.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                child: GridView.builder(
+                  itemCount: levels.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.55,
+                  ),
                   itemBuilder: (_, i) {
-                    final level = LevelRegistry.all[i];
+                    final level = levels[i];
                     final stars = progress.starsFor(level.id);
-                    final unlocked = progress.isUnlocked(level.starsRequired);
+                    final unlocked =
+                        kDebugMode || progress.isUnlocked(level.starsRequired);
                     return _LevelTile(
                       level: level,
                       stars: stars,
@@ -95,6 +119,54 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SeasonPicker extends StatelessWidget {
+  final GameSeason selected;
+  final ValueChanged<GameSeason> onSelected;
+
+  const _SeasonPicker({required this.selected, required this.onSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: GameSeason.values.map((season) {
+        final isSelected = season == selected;
+        final isLocked = season.locked;
+        final canSelect = !isLocked || kDebugMode;
+        final accent = isSelected ? const Color(0xFFFBBF24) : Colors.white30;
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: OutlinedButton.icon(
+              onPressed: canSelect ? () => onSelected(season) : null,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: accent,
+                disabledForegroundColor: Colors.white30,
+                side: BorderSide(color: accent.withValues(alpha: 0.65)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              icon: Icon(
+                isLocked ? Icons.lock_outline : Icons.park_rounded,
+                size: 16,
+              ),
+              label: Text(
+                season.label.toUpperCase(),
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -116,9 +188,7 @@ class _LevelTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = unlocked
-        ? const Color(0xFFFBBF24)
-        : Colors.white24;
+    final accent = unlocked ? const Color(0xFFFBBF24) : Colors.white24;
     return Material(
       color: const Color(0xFF1A1A2E),
       borderRadius: BorderRadius.circular(12),
@@ -126,16 +196,19 @@ class _LevelTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            border: Border.all(color: accent.withValues(alpha: 0.6), width: 1.4),
+            border: Border.all(
+              color: accent.withValues(alpha: 0.6),
+              width: 1.4,
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 42,
+                height: 42,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: unlocked ? 0.18 : 0.08),
@@ -145,21 +218,22 @@ class _LevelTile extends StatelessWidget {
                   '${level.id}',
                   style: TextStyle(
                     color: unlocked ? accent : Colors.white38,
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       level.name,
                       style: TextStyle(
                         color: unlocked ? Colors.white : Colors.white38,
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -175,21 +249,27 @@ class _LevelTile extends StatelessWidget {
                             color: filled
                                 ? const Color(0xFFFBBF24)
                                 : Colors.white24,
-                            size: 18,
+                            size: 16,
                           );
                         }),
                       )
                     else
                       Row(
                         children: [
-                          const Icon(Icons.lock_outline,
-                              color: Colors.white38, size: 14),
+                          const Icon(
+                            Icons.lock_outline,
+                            color: Colors.white38,
+                            size: 14,
+                          ),
                           const SizedBox(width: 4),
-                          Text(
-                            '${level.starsRequired} ★ gerekli ($totalStars var)',
-                            style: const TextStyle(
-                              color: Colors.white38,
-                              fontSize: 12,
+                          Expanded(
+                            child: Text(
+                              '${level.starsRequired} ★ gerekli',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white38,
+                                fontSize: 11,
+                              ),
                             ),
                           ),
                         ],
@@ -200,7 +280,7 @@ class _LevelTile extends StatelessWidget {
               Icon(
                 unlocked ? Icons.play_arrow_rounded : Icons.lock,
                 color: accent,
-                size: 28,
+                size: 22,
               ),
             ],
           ),

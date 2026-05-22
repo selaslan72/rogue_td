@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    name: Build debug APK
+    name: Build release APK
     runs-on: ubuntu-latest
 
     steps:
@@ -33,14 +33,17 @@ jobs:
       - name: Show Flutter version
         run: flutter --version
 
+      - name: Accept Android SDK licenses
+        run: yes | flutter doctor --android-licenses
+
       - name: Resolve dependencies
         run: flutter pub get
 
       - name: Analyze
         run: flutter analyze
 
-      - name: Build debug APK
-        run: flutter build apk --debug
+      - name: Build release APK
+        run: flutter build apk --release
 
       - name: Rename APK with branch + sha
         id: rename
@@ -48,7 +51,7 @@ jobs:
           BRANCH="${GITHUB_REF_NAME//\//-}"
           SHORT_SHA="${GITHUB_SHA:0:7}"
           NAME="rogue_td-${BRANCH}-${SHORT_SHA}.apk"
-          cp build/app/outputs/flutter-apk/app-debug.apk "build/${NAME}"
+          cp build/app/outputs/flutter-apk/app-release.apk "build/${NAME}"
           echo "name=${NAME}" >> "$GITHUB_OUTPUT"
           echo "path=build/${NAME}" >> "$GITHUB_OUTPUT"
 
@@ -59,15 +62,16 @@ jobs:
           path: ${{ steps.rename.outputs.path }}
           retention-days: 30
 
-      - name: Publish to "latest-debug" prerelease (main only)
+      - name: Publish to "latest-user" prerelease (main only)
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest-debug
-          name: Latest debug build (main)
+          tag_name: latest-user
+          name: Latest user-mode build (main)
           prerelease: true
           files: ${{ steps.rename.outputs.path }}
           body: |
-            Otomatik debug APK — `main` üzerindeki son commit.
+            Otomatik release APK — `main` üzerindeki son commit.
+            Kullanıcı modu: debug unlock kapalıdır, bölümler gerçek yıldız ilerlemesine göre açılır.
             Commit: `${{ github.sha }}`
             Telefondan kurmak için: indir → "Bilinmeyen kaynaklara izin ver" → kur.

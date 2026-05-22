@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../data/enemy_registry.dart';
 import '../data/tower_registry.dart';
@@ -44,6 +45,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
 
   GameMap get currentMap => level.map;
   final List<TowerCard> unlockedTowers = List.from(TowerRegistry.all);
+  bool get _isWinterMap => level.map.theme == MapTheme.winter;
 
   // ─── Notifier'lar (UI'ya yansır) ──────────────────────────────────────────
   final ValueNotifier<int> livesNotifier = ValueNotifier(initialLives);
@@ -85,13 +87,18 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
   Damageable? _selectedObstacle;
   Damageable? get selectedObstacle => _selectedObstacle;
 
-  // Hız çarpanı — 1.0 (normal) veya 1.5 (hızlı)
+  // Hız çarpanı — debug testlerinde 4x'e kadar çıkar.
   double _gameSpeed = 1.0;
-  final ValueNotifier<bool> speedUpNotifier = ValueNotifier(false);
+  final ValueNotifier<double> speedNotifier = ValueNotifier(1.0);
 
   void toggleSpeed() {
-    speedUpNotifier.value = !speedUpNotifier.value;
-    _gameSpeed = speedUpNotifier.value ? 1.5 : 1.0;
+    final next = switch (_gameSpeed) {
+      1.0 => 1.5,
+      1.5 when kDebugMode => 4.0,
+      _ => 1.0,
+    };
+    _gameSpeed = next;
+    speedNotifier.value = next;
   }
 
   // Wave spawning
@@ -100,7 +107,9 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
   final List<EnemyDef> _waveQueue = [];
 
   @override
-  Color backgroundColor() => const Color(0xFF0D1A0D);
+  Color backgroundColor() => level.map.theme == MapTheme.winter
+      ? const Color(0xFFE7EEF5)
+      : const Color(0xFF0D1A0D);
 
   TdGame({required this.level, this.onExitToLevels});
 
@@ -130,8 +139,12 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
       final center = Vector2(cx, cy);
       // %30 çalı, %70 güçlü ağaç
       final variant = _forestRng.nextDouble() < 0.30
-          ? TreeVariant.bush
-          : TreeVariant.tree;
+          ? (map.theme == MapTheme.winter
+                ? TreeVariant.snowBush
+                : TreeVariant.bush)
+          : (map.theme == MapTheme.winter
+                ? TreeVariant.snowPine
+                : TreeVariant.tree);
       final tree = TreeComponent(
         worldPosition: center.clone(),
         sizeScale: 1.0,
@@ -152,6 +165,9 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
         worldPosition: center.clone(),
         sizeScale: 1.0,
         seed: rockSeed++,
+        variant: map.theme == MapTheme.winter
+            ? RockVariant.frost
+            : RockVariant.stone,
         clusterId: id,
         onDestroyed: (r) => _onObstacleDestroyed(r, r.clusterId),
         onTap: _handleRockTap,
@@ -161,7 +177,13 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     }
 
     for (final slotPos in map.towerSlots) {
-      add(TowerSlot(worldPosition: slotPos, onTap: _handleSlotTap));
+      add(
+        TowerSlot(
+          worldPosition: slotPos,
+          winterStyle: map.theme == MapTheme.winter,
+          onTap: _handleSlotTap,
+        ),
+      );
     }
   }
 
@@ -218,7 +240,11 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
         goldNotifier.value = gold;
       }
       add(
-        TowerSlot(worldPosition: cluster.center.clone(), onTap: _handleSlotTap),
+        TowerSlot(
+          worldPosition: cluster.center.clone(),
+          winterStyle: _isWinterMap,
+          onTap: _handleSlotTap,
+        ),
       );
     }
   }
@@ -543,6 +569,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
       ProgressService.instance.setStars(level.id, stars);
     }
     runResultNotifier.value = RunResult(
+      season: level.season,
       victory: victory,
       waveReached: wave,
       totalWaves: maxWaves,

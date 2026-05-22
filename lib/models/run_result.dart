@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'game_season.dart';
 import 'tower_card.dart';
 
 @immutable
 class RunResult {
+  final GameSeason season;
   final bool victory;
   final int waveReached;
   final int totalWaves;
@@ -16,6 +18,7 @@ class RunResult {
   final int fragmentsEarned;
 
   const RunResult({
+    required this.season,
     required this.victory,
     required this.waveReached,
     required this.totalWaves,
@@ -44,6 +47,6 @@ class RunResult {
     final flag = victory ? '🏆 VICTORY' : '💀 DEFEAT';
     final towers = towersUsed.map((t) => t.icon).join('');
     final starStr = '★' * stars + '☆' * (3 - stars);
-    return '$flag\nBölüm $levelId — $mapName\nWave $waveReached / $totalWaves\n$starStr\nTowers: $towers\n+$fragmentsEarned 💎\n#RogueTD';
+    return '$flag\n${season.label} $levelId — $mapName\nWave $waveReached / $totalWaves\n$starStr\nTowers: $towers\n+$fragmentsEarned 💎\n#RogueTD';
   }
 }
