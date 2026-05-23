@@ -36,6 +36,9 @@ class PathData {
   static const double forestStep = slotSide; // 48 — aynı grid boyutu
   static const double mapW = 480;
   static const double mapH = 800;
+  static const double _targetCastleHalfW = 40;
+  static const double _targetCastleTopClearance = 47;
+  static const double _targetCastleBottomClearance = 45;
 
   // ─── Grid helpers ─────────────────────────────────────────────────────────
 
@@ -89,6 +92,19 @@ class PathData {
     return sqrt(ex * ex + ey * ey);
   }
 
+  static List<Vector2> _withVisibleTargetCastle(List<Vector2> waypoints) {
+    final adjusted = List<Vector2>.of(waypoints);
+    final target = adjusted.last;
+    adjusted[adjusted.length - 1] = Vector2(
+      target.x.clamp(_targetCastleHalfW, mapW - _targetCastleHalfW),
+      target.y.clamp(
+        _targetCastleTopClearance,
+        mapH - _targetCastleBottomClearance,
+      ),
+    );
+    return adjusted;
+  }
+
   /// Çakışmasız grid yerleşimi: slot > kaya > ağaç önceliği.
   ///
   /// 1) Her slot en yakın hücreye snap'lenir, dedupe edilir.
@@ -104,13 +120,15 @@ class PathData {
     double pathClearance = 48,
     double slotClearance = 44,
   }) {
+    final visibleWaypoints = _withVisibleTargetCastle(waypoints);
+
     // 1) Slotlar
     final slotCells = <(int, int)>{};
     final snappedSlots = <Vector2>[];
     for (final s in rawSlots) {
       final k = _cellKey(s.x, s.y);
       final c = _cellCenter(k.$1, k.$2);
-      if (_isPathCell(c.$1, c.$2, waypoints, clearance: slotClearance)) {
+      if (_isPathCell(c.$1, c.$2, visibleWaypoints, clearance: slotClearance)) {
         continue;
       }
       if (slotCells.add(k)) {
@@ -126,7 +144,7 @@ class PathData {
       if (slotCells.contains(k)) continue;
       if (rockCells.contains(k)) continue;
       final c = _cellCenter(k.$1, k.$2);
-      if (_isPathCell(c.$1, c.$2, waypoints, clearance: pathClearance)) {
+      if (_isPathCell(c.$1, c.$2, visibleWaypoints, clearance: pathClearance)) {
         continue;
       }
       rockCells.add(k);
@@ -143,7 +161,12 @@ class PathData {
         if (slotCells.contains(key)) continue;
         if (rockCells.contains(key)) continue;
         final c = _cellCenter(i, j);
-        if (_isPathCell(c.$1, c.$2, waypoints, clearance: pathClearance)) {
+        if (_isPathCell(
+          c.$1,
+          c.$2,
+          visibleWaypoints,
+          clearance: pathClearance,
+        )) {
           continue;
         }
         trees.add((c.$1, c.$2, 1.0));
@@ -153,7 +176,7 @@ class PathData {
     return GameMap(
       name: name,
       theme: theme,
-      waypoints: waypoints,
+      waypoints: visibleWaypoints,
       towerSlots: snappedSlots,
       treePositions: trees,
       rockPositions: snappedRocks,
@@ -1023,39 +1046,39 @@ class PathData {
   );
 
   static final loopback = _assemble(
-    name: 'Loopback',
+    name: 'Garden Run',
     waypoints: <Vector2>[
-      Vector2(0, 220),
-      Vector2(370, 220),
-      Vector2(370, 80),
-      Vector2(110, 80),
-      Vector2(110, 560),
-      Vector2(370, 560),
-      Vector2(370, 400),
-      Vector2(110, 400),
-      Vector2(110, 720),
+      Vector2(0, 140),
+      Vector2(300, 140),
+      Vector2(300, 280),
+      Vector2(90, 280),
+      Vector2(90, 430),
+      Vector2(390, 430),
+      Vector2(390, 590),
+      Vector2(180, 590),
+      Vector2(180, 720),
       Vector2(480, 720),
     ],
     rawSlots: <Vector2>[
-      Vector2(220, 150),
-      Vector2(430, 150),
-      Vector2(60, 150),
-      Vector2(220, 300),
-      Vector2(430, 300),
-      Vector2(220, 480),
-      Vector2(430, 480),
-      Vector2(60, 480),
-      Vector2(220, 650),
-      Vector2(430, 650),
-      Vector2(60, 650),
+      Vector2(120, 72),
+      Vector2(408, 168),
+      Vector2(216, 216),
+      Vector2(408, 312),
+      Vector2(24, 360),
+      Vector2(216, 360),
+      Vector2(456, 504),
+      Vector2(72, 552),
+      Vector2(288, 648),
+      Vector2(408, 648),
+      Vector2(72, 744),
     ],
     rawRocks: const <(double, double, double)>[
-      (240, 40, 1.0),
-      (420, 40, 0.95),
-      (300, 220, 1.05),
-      (60, 300, 1.1),
-      (300, 400, 0.9),
-      (240, 760, 1.0),
+      (216, 24, 1.0),
+      (408, 72, 0.95),
+      (456, 264, 1.05),
+      (24, 504, 1.1),
+      (312, 504, 0.9),
+      (312, 744, 1.0),
     ],
   );
 
@@ -1461,8 +1484,8 @@ class PathData {
       Vector2(320, 230),
       Vector2(80, 230),
       Vector2(80, 390),
-      Vector2(360, 390),
-      Vector2(360, 620),
+      Vector2(340, 390),
+      Vector2(340, 620),
       Vector2(480, 620),
     ],
     rawSlots: <Vector2>[
@@ -1633,8 +1656,8 @@ class PathData {
           Vector2(345, 405),
           Vector2(125, 405),
           Vector2(125, 560),
-          Vector2(390, 560),
-          Vector2(390, 700),
+          Vector2(350, 560),
+          Vector2(350, 700),
           Vector2(480, 700),
         ],
         rawSlots: <Vector2>[
@@ -1756,8 +1779,8 @@ class PathData {
           Vector2(365, 440),
           Vector2(115, 440),
           Vector2(115, 600),
-          Vector2(360, 600),
-          Vector2(360, 725),
+          Vector2(350, 600),
+          Vector2(350, 725),
           Vector2(480, 725),
         ],
         rawSlots: <Vector2>[
@@ -1958,8 +1981,8 @@ class PathData {
             Vector2(160, mid - 40),
             Vector2(300, mid - 40),
             Vector2(300, mid + 120),
-            Vector2(360, mid + 120),
-            Vector2(360, high),
+            Vector2(350, mid + 120),
+            Vector2(350, high),
             Vector2(480, high),
           ],
           rawSlots: <Vector2>[

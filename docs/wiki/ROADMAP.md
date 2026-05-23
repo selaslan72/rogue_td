@@ -45,6 +45,8 @@ The season expansion is now partially implemented in code:
   have corrected/custom readable routes.
 - A campaign-wide Winter route regression test now requires every Winter path
   to keep the target-castle approach for the final segment.
+- Map assembly now clamps the target-castle waypoint inside the visible 480x800
+  play area so the full player castle stays on screen across Spring and Winter.
 - GitHub Actions now builds a release/user-mode APK instead of a debug APK.
   Release builds do not use `kDebugMode`, so debug-only level unlocking is not
   active for players.
@@ -63,7 +65,7 @@ maps.
   continue to feel distinct through snowy visuals, pine trees, icy rocks,
   colder path colors, and season-specific decoration.
 - Map generation/assembly should keep enforcing usable build slots, path
-  clearance, and target-route sanity with tests.
+  clearance, target-castle visibility, and target-route sanity with tests.
 
 This keeps content production focused on player-facing variety rather than only
 data scaling.
@@ -165,6 +167,11 @@ The first 30-level Spring campaign exists. The next step is quality control:
   dominant tower positions.
 - Tune slot placement, obstacle density, and clearing pressure per map.
 - Keep adding tests for path/slot regressions when layouts change.
+- Target castles are normalized into the visible play area at map assembly
+  time, and tests now cover the campaign-wide bounds rule.
+- Spring 22 was redesigned from `Loopback` to `Garden Run` after playtest
+  feedback. It now uses a clearer switchback route and only approaches the
+  target castle on the final segment; tests cover that regression.
 
 ### Winter Campaign Pass
 
@@ -206,7 +213,7 @@ grows further:
 - Build or script a map preview/validator so externally generated maps can be
   reviewed quickly before being registered in the campaign.
 - Continue using automated tests as the quality gate for path clearance,
-  target-castle approach, and usable slot counts.
+  target-castle visibility, target-castle approach, and usable slot counts.
 
 ### Tower Identity Pass
 

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rogue_td/data/level_registry.dart';
+import 'package:rogue_td/game/path_data.dart';
 import 'package:rogue_td/models/game_season.dart';
 
 void main() {
@@ -155,6 +156,55 @@ void main() {
       }
     },
   );
+
+  test('spring level 22 uses a readable final target approach', () {
+    final map = LevelRegistry.allFor(GameSeason.spring)[21].map;
+    final target = map.waypoints.last;
+
+    expect(map.name, 'Garden Run');
+
+    for (var i = 0; i < map.waypoints.length - 2; i++) {
+      final distance = _distanceToSegment(
+        target,
+        map.waypoints[i],
+        map.waypoints[i + 1],
+      );
+      expect(
+        distance,
+        greaterThanOrEqualTo(90),
+        reason:
+            'Spring 22 should not pass in front of the target castle before the final segment.',
+      );
+    }
+  });
+
+  test('all target castles stay inside the visible play area', () {
+    const castleHalfW = 40.0;
+    const castleTopClearance = 47.0;
+    const castleBottomClearance = 45.0;
+
+    for (final season in GameSeason.values) {
+      for (final level in LevelRegistry.allFor(season)) {
+        final target = level.map.waypoints.last;
+
+        expect(
+          target.x,
+          inInclusiveRange(castleHalfW, PathData.mapW - castleHalfW),
+          reason:
+              '${season.label} ${level.id} (${level.map.name}) target castle overflows horizontally.',
+        );
+        expect(
+          target.y,
+          inInclusiveRange(
+            castleTopClearance,
+            PathData.mapH - castleBottomClearance,
+          ),
+          reason:
+              '${season.label} ${level.id} (${level.map.name}) target castle overflows vertically.',
+        );
+      }
+    }
+  });
 
   test('all campaign slots stay clear of enemy paths', () {
     for (final season in GameSeason.values) {
