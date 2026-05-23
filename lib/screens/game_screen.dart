@@ -962,7 +962,10 @@ class _ResultActions extends StatelessWidget {
     final canAdvance =
         result.victory &&
         nextLevel != null &&
-        ProgressService.instance.isUnlocked(nextLevel.starsRequired);
+        ProgressService.instance.isUnlocked(
+          nextLevel.starsRequired,
+          season: nextLevel.season,
+        );
 
     return Column(
       children: [

@@ -48,12 +48,9 @@ The season expansion is now partially implemented in code:
 - GitHub Actions now builds a release/user-mode APK instead of a debug APK.
   Release builds do not use `kDebugMode`, so debug-only level unlocking is not
   active for players.
-
-Important remaining gap:
-
-- Progress is **not fully season-aware yet**. `ProgressService` still stores
-  stars by `levelId`, so `Spring 1` and `Winter 1` can collide. This should be
-  fixed before treating the season system as complete.
+- Progress is season-aware. Stars are stored by season and level, so `Spring 1`
+  and `Winter 1` no longer collide. Legacy `level_stars_v1` progress migrates
+  into Spring progress.
 
 ### Recommended Architecture
 
@@ -113,7 +110,7 @@ Resolved or leaning:
 4. **Done:** add a Spring/Winter selector and season-aware level list.
 5. **Done:** add winter palette and winter obstacle/decor/slot variants.
 6. **Done:** register 30 Winter levels with winter visuals and scaling.
-7. **Next:** make saved stars season-aware so `Spring 1` and `Winter 1` cannot
+7. **Done:** make saved stars season-aware so `Spring 1` and `Winter 1` cannot
    collide.
 8. **Next:** decide the real Winter unlock rule and make the UI communicate it.
 9. **Next:** playtest the new Spring/Winter layouts and tune path, slot,
@@ -136,18 +133,20 @@ Resolved for MVP:
 
 ## Near-Term Contribution Tracks
 
-### Progress Persistence Fix
+### Progress Persistence
 
-This is the highest-priority technical fix after the season expansion:
+Season-aware progress is implemented:
 
-- Store stars by season and level, for example `spring:1` and `winter:1`.
-- Keep old `level_stars_v1` migration in mind so existing Spring progress can
-  survive the schema change.
-- Add tests for Spring/Winter star separation.
-- Make level select totals season-aware instead of using the global star total
-  for the selected season display.
-- Decide whether unlock checks use season-specific stars or total account
-  stars.
+- Stars are stored by season and level, for example `spring:1` and `winter:1`.
+- Old `level_stars_v1` progress migrates into Spring progress.
+- Level select totals are season-aware.
+- Unlock checks use season-specific stars.
+- Tests cover Spring/Winter star separation, unlock separation, and legacy
+  migration.
+
+Remaining progression decision:
+
+- Decide when Winter should unlock in release builds.
 
 ### Developer Testing Tools
 
@@ -280,7 +279,7 @@ The game currently has:
 - Season-aware level definitions and level registry.
 - A Spring/Winter selector in level select.
 - Winter visual variants for background, foliage, rocks, and tower slots.
-- Persistent stars and fragments via `SharedPreferences`.
+- Season-aware persistent stars and shared fragments via `SharedPreferences`.
 - Level locking based on total stars.
 - Debug-mode level unlocking.
 - Tests covering campaign counts, slot/path clearance, and Winter target-castle
@@ -289,9 +288,6 @@ The game currently has:
 
 Current known technical debt:
 
-- Star persistence still keys by `levelId` only and must become season-aware.
-- Level select currently labels the selected season while still reading a global
-  star total.
 - Winter unlock rules are not finalized for release builds.
 - Spring maps still need the same readability QA pass that Winter just received;
   Spring 22 was flagged as especially poor and should be redesigned next.

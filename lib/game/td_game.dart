@@ -566,7 +566,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     // Asenkron — UI bunu beklemiyor, kayıt arka planda olur
     ProgressService.instance.addFragments(fragmentsEarned);
     if (stars > 0) {
-      ProgressService.instance.setStars(level.id, stars);
+      ProgressService.instance.setStars(level.id, stars, season: level.season);
     }
     runResultNotifier.value = RunResult(
       season: level.season,

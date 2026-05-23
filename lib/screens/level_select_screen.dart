@@ -36,8 +36,8 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
   @override
   Widget build(BuildContext context) {
     final progress = ProgressService.instance;
-    final total = progress.totalStars;
     final levels = LevelRegistry.allFor(_season);
+    final total = progress.totalStarsFor(_season);
     final maxStars = levels.length * 3;
     final targetLevels = LevelRegistry.targetCountFor(_season);
 
@@ -102,9 +102,16 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                   ),
                   itemBuilder: (_, i) {
                     final level = levels[i];
-                    final stars = progress.starsFor(level.id);
+                    final stars = progress.starsFor(
+                      level.id,
+                      season: level.season,
+                    );
                     final unlocked =
-                        kDebugMode || progress.isUnlocked(level.starsRequired);
+                        kDebugMode ||
+                        progress.isUnlocked(
+                          level.starsRequired,
+                          season: level.season,
+                        );
                     return _LevelTile(
                       level: level,
                       stars: stars,
