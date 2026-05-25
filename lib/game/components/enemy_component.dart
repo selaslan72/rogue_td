@@ -23,6 +23,8 @@ class EnemyComponent extends PositionComponent implements Damageable {
   double _burnDps = 0.0;
   double _burnTimer = 0.0;
   Color _burnColor = const Color(0xFFF97316);
+  ValueChanged<double>? _burnDamageRecorder;
+  VoidCallback? _burnKillRecorder;
   double _animTime = 0;
 
   static final _hpBgPaint = Paint()..color = const Color(0xCC1A1A1A);
@@ -92,30 +94,39 @@ class EnemyComponent extends PositionComponent implements Damageable {
   }
 
   @override
-  void takeDamage(double amount) {
-    takeDamageWithArmorPierce(amount, 0);
+  double takeDamage(double amount) {
+    return takeDamageWithArmorPierce(amount, 0);
   }
 
-  void takeDamageWithArmorPierce(double amount, double armorPierce) {
-    if (!isAlive) return;
+  double takeDamageWithArmorPierce(double amount, double armorPierce) {
+    if (!isAlive) return 0;
     final armor = (def.armor + _armorBonus - armorPierce).clamp(
       0.0,
       double.infinity,
     );
     final effective = (amount - armor).clamp(0.0, double.infinity);
-    _applyDamage(effective);
+    return _applyDamage(effective);
   }
 
-  void applyBurn(double dps, double duration, Color color) {
+  void applyBurn(
+    double dps,
+    double duration,
+    Color color, {
+    ValueChanged<double>? onDamageDealt,
+    VoidCallback? onKilled,
+  }) {
     if (!isAlive) return;
     _burnDps = max(_burnDps, dps);
     _burnTimer = max(_burnTimer, duration);
     _burnColor = color;
+    _burnDamageRecorder = onDamageDealt;
+    _burnKillRecorder = onKilled;
   }
 
-  void _applyDamage(double effective) {
-    if (!isAlive || effective <= 0) return;
-    _hp -= effective;
+  double _applyDamage(double effective) {
+    if (!isAlive || effective <= 0) return 0;
+    final dealt = effective.clamp(0.0, _hp);
+    _hp -= dealt;
     if (_hp <= 0) {
       _hp = 0;
       parent?.add(
@@ -129,6 +140,7 @@ class EnemyComponent extends PositionComponent implements Damageable {
       onKilled(this);
       removeFromParent();
     }
+    return dealt;
   }
 
   bool _isBlockedBySoldier() {
@@ -157,7 +169,10 @@ class EnemyComponent extends PositionComponent implements Damageable {
 
     if (_burnTimer > 0) {
       _burnTimer -= dt;
-      _applyDamage(_burnDps * dt);
+      final wasAlive = isAlive;
+      final dealt = _applyDamage(_burnDps * dt);
+      if (dealt > 0) _burnDamageRecorder?.call(dealt);
+      if (wasAlive && !isAlive) _burnKillRecorder?.call();
       if (_burnTimer <= 0) _burnDps = 0;
       if (!isAlive) return;
     }

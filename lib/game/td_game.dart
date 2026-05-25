@@ -11,6 +11,7 @@ import '../models/enemy_def.dart';
 import '../models/level_def.dart';
 import '../models/run_result.dart';
 import '../models/tower_card.dart';
+import '../models/tower_contribution.dart';
 import '../services/progress_service.dart';
 import 'components/castle_component.dart';
 import 'components/damageable.dart';
@@ -91,6 +92,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
   double _gameSpeed = 1.0;
   final ValueNotifier<double> speedNotifier = ValueNotifier(1.0);
   final ValueNotifier<bool> pauseNotifier = ValueNotifier(false);
+  final Map<String, TowerContribution> _towerContributions = {};
 
   void toggleSpeed() {
     final next = switch (_gameSpeed) {
@@ -114,6 +116,46 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
       pauseNotifier.value = true;
       pauseEngine();
     }
+  }
+
+  void recordTowerDamage(TowerCard card, double amount) {
+    if (amount <= 0) return;
+    final current =
+        _towerContributions[card.id] ?? TowerContribution.empty(card);
+    _towerContributions[card.id] = current.copyWith(
+      damage: current.damage + amount,
+    );
+  }
+
+  void recordTowerKill(TowerCard card) {
+    final current =
+        _towerContributions[card.id] ?? TowerContribution.empty(card);
+    _towerContributions[card.id] = current.copyWith(kills: current.kills + 1);
+  }
+
+  void recordTowerSlow(TowerCard card) {
+    final current =
+        _towerContributions[card.id] ?? TowerContribution.empty(card);
+    _towerContributions[card.id] = current.copyWith(slows: current.slows + 1);
+  }
+
+  void recordTowerBlock(TowerCard card, double seconds) {
+    if (seconds <= 0) return;
+    final current =
+        _towerContributions[card.id] ?? TowerContribution.empty(card);
+    _towerContributions[card.id] = current.copyWith(
+      blockSeconds: current.blockSeconds + seconds,
+    );
+  }
+
+  List<TowerContribution> _contributionSummary() {
+    final stats = _towerContributions.values.toList();
+    stats.sort((a, b) {
+      final byDamage = b.damage.compareTo(a.damage);
+      if (byDamage != 0) return byDamage;
+      return b.kills.compareTo(a.kills);
+    });
+    return List.unmodifiable(stats);
   }
 
   // Wave spawning
@@ -673,6 +715,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
       levelId: level.id,
       mapName: currentMap.name,
       towersUsed: towers,
+      towerContributions: _contributionSummary(),
       fragmentsEarned: fragmentsEarned,
     );
     pauseEngine();
@@ -701,6 +744,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     waveActive = false;
     _waveQueue.clear();
     _spawnTimer = 0;
+    _towerContributions.clear();
 
     livesNotifier.value = lives;
     goldNotifier.value = gold;

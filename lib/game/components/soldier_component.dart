@@ -11,13 +11,16 @@ import 'particle_effect.dart';
 /// Ölünce parent tower respawn timer'ı başlatır (callback).
 class SoldierComponent extends PositionComponent implements Damageable {
   final Color color;
-  final Vector2 rallyPoint;  // yol üzerinde sabit nokta — buraya geri döner
-  final double chaseRadius;  // rally point'ten bu kadar uzağa kadar kovalar
-  final double damage;       // her vuruşta verdiği hasar
-  final double fireRate;     // saniyede vuruş sayısı
+  final Vector2 rallyPoint; // yol üzerinde sabit nokta — buraya geri döner
+  final double chaseRadius; // rally point'ten bu kadar uzağa kadar kovalar
+  final double damage; // her vuruşta verdiği hasar
+  final double fireRate; // saniyede vuruş sayısı
   final double maxHp;
   final double speed;
   final void Function() onDied;
+  final ValueChanged<double>? onDamageDealt;
+  final VoidCallback? onKill;
+  final ValueChanged<double>? onBlockTime;
 
   static const double contactRange = 14.0;
 
@@ -48,13 +51,16 @@ class SoldierComponent extends PositionComponent implements Damageable {
     required this.maxHp,
     required this.speed,
     required this.onDied,
+    this.onDamageDealt,
+    this.onKill,
+    this.onBlockTime,
     Vector2? spawnAt,
   }) : super(
-          position: (spawnAt ?? rallyPoint).clone(),
-          size: Vector2.all(16),
-          anchor: Anchor.center,
-          priority: 5,
-        ) {
+         position: (spawnAt ?? rallyPoint).clone(),
+         size: Vector2.all(16),
+         anchor: Anchor.center,
+         priority: 5,
+       ) {
     _hp = maxHp;
     _bodyPaint = Paint()..color = color;
     _helmetPaint = Paint()..color = Color.lerp(color, Colors.black, 0.45)!;
@@ -68,21 +74,25 @@ class SoldierComponent extends PositionComponent implements Damageable {
   double get bodyRadius => 7.0;
 
   @override
-  void takeDamage(double amount) {
-    if (!isAlive) return;
+  double takeDamage(double amount) {
+    if (!isAlive) return 0;
+    final dealt = amount.clamp(0.0, _hp);
     _hp -= amount;
     _hitFlash = 0.2;
     if (_hp <= 0) {
       _hp = 0;
-      parent?.add(ParticleEffect(
-        worldPosition: worldPosition.clone(),
-        color: color,
-        duration: 0.35,
-        maxRadius: 12,
-      ));
+      parent?.add(
+        ParticleEffect(
+          worldPosition: worldPosition.clone(),
+          color: color,
+          duration: 0.35,
+          maxRadius: 12,
+        ),
+      );
       onDied();
       removeFromParent();
     }
+    return dealt;
   }
 
   @override
@@ -131,19 +141,24 @@ class SoldierComponent extends PositionComponent implements Damageable {
     } else {
       // Kontak: vur ve temas hasarı al
       if (_attackCd <= 0) {
-        t.takeDamage(damage);
+        final wasAlive = t.isAlive;
+        onDamageDealt?.call(t.takeDamage(damage));
+        if (wasAlive && !t.isAlive) onKill?.call();
         _attackCd = 1.0 / fireRate;
       }
+      onBlockTime?.call(dt);
       // Düşman temas hasarı (saniyelik)
       _hp -= t.def.contactDamage * dt;
       if (_hp <= 0) {
         _hp = 0;
-        parent?.add(ParticleEffect(
-          worldPosition: worldPosition.clone(),
-          color: color,
-          duration: 0.35,
-          maxRadius: 12,
-        ));
+        parent?.add(
+          ParticleEffect(
+            worldPosition: worldPosition.clone(),
+            color: color,
+            duration: 0.35,
+            maxRadius: 12,
+          ),
+        );
         onDied();
         removeFromParent();
         return;

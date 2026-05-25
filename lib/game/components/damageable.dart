@@ -6,7 +6,7 @@ abstract class Damageable {
   bool get isMounted;
   bool get isAlive;
   Vector2 get worldPosition;
-  void takeDamage(double amount);
+  double takeDamage(double amount);
 
   /// Hedefin yaklaşık gövde yarıçapı — range kontrolünde kullanılır.
   /// Tower menzil dairesi bu yarıçapın kenarına değiyorsa hedef sayılır.

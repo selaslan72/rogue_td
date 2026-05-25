@@ -28,6 +28,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   Damageable? _currentTarget;
   double _muzzleFlash = 0;
   int _precisionShotCounter = 0;
+  double _supportStatTimer = 0;
 
   static const int _teslaMaxLinks = 3;
   static const double _teslaDamageBonusPerLink = 0.10;
@@ -128,6 +129,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
 
     if (_cooldown > 0) _cooldown -= dt;
     if (_muzzleFlash > 0) _muzzleFlash -= dt * 4;
+    if (_supportStatTimer > 0) _supportStatTimer -= dt;
 
     final game = findGame();
     if (game is TdGame && game.placementPhaseNotifier.value) return;
@@ -143,10 +145,17 @@ class TowerComponent extends PositionComponent with TapCallbacks {
       _frostPulse = (_frostPulse + dt * 2.5) % (2 * math.pi);
       const slowPerLevel = [0.0, 0.40, 0.52, 0.62];
       final slowAmt = slowPerLevel[level];
-      parent?.children
+      final slowed = parent?.children
           .whereType<EnemyComponent>()
           .where(_inRange)
-          .forEach((e) => e.applySlow(slowAmt, 0.30));
+          .toList();
+      slowed?.forEach((e) => e.applySlow(slowAmt, 0.30));
+      if (_supportStatTimer <= 0 && slowed != null && slowed.isNotEmpty) {
+        for (final _ in slowed) {
+          _recordSlow();
+        }
+        _supportStatTimer = 1.0;
+      }
       return;
     }
 
@@ -213,6 +222,26 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     );
   }
 
+  void _recordDamage(double amount) {
+    final game = findGame();
+    if (game is TdGame) game.recordTowerDamage(card, amount);
+  }
+
+  void _recordKill() {
+    final game = findGame();
+    if (game is TdGame) game.recordTowerKill(card);
+  }
+
+  void _recordSlow() {
+    final game = findGame();
+    if (game is TdGame) game.recordTowerSlow(card);
+  }
+
+  void _recordBlock(double seconds) {
+    final game = findGame();
+    if (game is TdGame) game.recordTowerBlock(card, seconds);
+  }
+
   void _fire(Damageable target) {
     if (target is! EnemyComponent) {
       switch (card.type) {
@@ -228,6 +257,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
               visual: ProjectileVisual.arrow,
               speed: isCrit ? 460 : 360,
               impactRadius: isCrit ? 18 : 0,
+              onDamageDealt: _recordDamage,
             ),
           );
         case TowerType.splash:
@@ -241,10 +271,11 @@ class TowerComponent extends PositionComponent with TapCallbacks {
               speed: 240,
               splashRadius: 60,
               armorPierce: 6 + level * 3,
+              onDamageDealt: _recordDamage,
             ),
           );
         default:
-          target.takeDamage(currentDamage);
+          _recordDamage(target.takeDamage(currentDamage));
           _spawnHit(target.worldPosition.clone());
       }
       return;
@@ -262,6 +293,8 @@ class TowerComponent extends PositionComponent with TapCallbacks {
             visual: ProjectileVisual.arrow,
             speed: isCrit ? 460 : 360,
             impactRadius: isCrit ? 18 : 0,
+            onDamageDealt: _recordDamage,
+            onKill: _recordKill,
           ),
         );
       case TowerType.splash:
@@ -275,6 +308,8 @@ class TowerComponent extends PositionComponent with TapCallbacks {
             speed: 240,
             splashRadius: 60,
             armorPierce: 6 + level * 3,
+            onDamageDealt: _recordDamage,
+            onKill: _recordKill,
           ),
         );
       case TowerType.slow:
@@ -289,6 +324,9 @@ class TowerComponent extends PositionComponent with TapCallbacks {
             slowAmount: 0.5,
             slowDuration: 1.5,
             impactRadius: 14,
+            onDamageDealt: _recordDamage,
+            onKill: _recordKill,
+            onSlowApplied: _recordSlow,
           ),
         );
       case TowerType.damageOverTime:
@@ -303,6 +341,8 @@ class TowerComponent extends PositionComponent with TapCallbacks {
             burnDps: currentDamage * 0.65,
             burnDuration: 2.0 + level * 0.5,
             impactRadius: 16,
+            onDamageDealt: _recordDamage,
+            onKill: _recordKill,
           ),
         );
       case TowerType.chain:
@@ -316,7 +356,9 @@ class TowerComponent extends PositionComponent with TapCallbacks {
 
         // Tesla'nın mevcut chain kimliğini koru; link bonusu hasarı besler.
         final chainCount = card.id == 'frost-king' ? 3 : 2;
-        target.takeDamage(damage);
+        final targetWasAlive = target.isAlive;
+        _recordDamage(target.takeDamage(damage));
+        if (targetWasAlive && !target.isAlive) _recordKill();
         _spawnHit(target.worldPosition.clone());
         parent?.add(
           LightningArc(
@@ -332,7 +374,9 @@ class TowerComponent extends PositionComponent with TapCallbacks {
         for (int i = 1; i < chainCount; i++) {
           final next = _findChainNext(lastHit, hit);
           if (next == null) break;
-          next.takeDamage(dmg);
+          final nextWasAlive = next.isAlive;
+          _recordDamage(next.takeDamage(dmg));
+          if (nextWasAlive && !next.isAlive) _recordKill();
           if (card.id == 'frost-king') next.applySlow(0.4, 1.2);
           _spawnHit(next.worldPosition.clone());
           parent?.add(
@@ -396,6 +440,9 @@ class TowerComponent extends PositionComponent with TapCallbacks {
         _soldiers[index] = null;
         _soldierRespawn[index] = _barracksRespawn;
       },
+      onDamageDealt: _recordDamage,
+      onKill: _recordKill,
+      onBlockTime: _recordBlock,
     );
     _soldiers[index] = soldier;
     parent?.add(soldier);

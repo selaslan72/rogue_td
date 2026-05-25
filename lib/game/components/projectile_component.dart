@@ -24,6 +24,9 @@ class ProjectileComponent extends PositionComponent {
   final double burnDps;
   final double burnDuration;
   final double impactRadius;
+  final ValueChanged<double>? onDamageDealt;
+  final VoidCallback? onKill;
+  final VoidCallback? onSlowApplied;
 
   Vector2? _lastTargetPos;
   double _life = 3.0;
@@ -42,6 +45,9 @@ class ProjectileComponent extends PositionComponent {
     this.burnDps = 0,
     this.burnDuration = 0,
     this.impactRadius = 0,
+    this.onDamageDealt,
+    this.onKill,
+    this.onSlowApplied,
   }) : super(
          position: worldPosition,
          size: Vector2.all(10),
@@ -89,18 +95,33 @@ class ProjectileComponent extends PositionComponent {
 
     final impactPos = position.clone();
     if (target.isMounted && target.isAlive) {
+      final wasAlive = target.isAlive;
+      double dealt;
       if (target is EnemyComponent) {
-        (target as EnemyComponent).takeDamageWithArmorPierce(
+        dealt = (target as EnemyComponent).takeDamageWithArmorPierce(
           damage,
           armorPierce,
         );
       } else {
-        target.takeDamage(damage);
+        dealt = target.takeDamage(damage);
       }
+      if (dealt > 0) onDamageDealt?.call(dealt);
+      if (wasAlive && !target.isAlive) onKill?.call();
       if (target is EnemyComponent) {
         final enemy = target as EnemyComponent;
-        if (slowAmount > 0) enemy.applySlow(slowAmount, slowDuration);
-        if (burnDps > 0) enemy.applyBurn(burnDps, burnDuration, color);
+        if (slowAmount > 0) {
+          enemy.applySlow(slowAmount, slowDuration);
+          onSlowApplied?.call();
+        }
+        if (burnDps > 0) {
+          enemy.applyBurn(
+            burnDps,
+            burnDuration,
+            color,
+            onDamageDealt: onDamageDealt,
+            onKilled: onKill,
+          );
+        }
       }
     }
     // Splash sadece düşmana atılan mermi için yayılır; engele (ağaç/kaya/çalı)
@@ -110,7 +131,10 @@ class ProjectileComponent extends PositionComponent {
         if (identical(d, target)) continue;
         if (!d.isAlive) continue;
         if (d.worldPosition.distanceTo(impactPos) <= splashRadius) {
-          d.takeDamageWithArmorPierce(damage * 0.6, armorPierce);
+          final wasAlive = d.isAlive;
+          final dealt = d.takeDamageWithArmorPierce(damage * 0.6, armorPierce);
+          if (dealt > 0) onDamageDealt?.call(dealt);
+          if (wasAlive && !d.isAlive) onKill?.call();
         }
       }
     }

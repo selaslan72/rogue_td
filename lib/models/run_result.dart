@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'game_season.dart';
 import 'tower_card.dart';
+import 'tower_contribution.dart';
 
 @immutable
 class RunResult {
@@ -15,6 +16,7 @@ class RunResult {
   final int levelId;
   final String mapName;
   final List<TowerCard> towersUsed;
+  final List<TowerContribution> towerContributions;
   final int fragmentsEarned;
 
   const RunResult({
@@ -29,6 +31,7 @@ class RunResult {
     required this.levelId,
     required this.mapName,
     required this.towersUsed,
+    this.towerContributions = const [],
     required this.fragmentsEarned,
   });
 

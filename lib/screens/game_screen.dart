@@ -10,6 +10,7 @@ import '../models/enemy_def.dart';
 import '../models/level_def.dart';
 import '../models/run_result.dart';
 import '../models/tower_card.dart';
+import '../models/tower_contribution.dart';
 import '../services/progress_service.dart';
 
 /// GameWidget'ı saran ekran. HUD overlay + tower seçici barı içerir.
@@ -946,6 +947,20 @@ class _RunResultOverlay extends StatelessWidget {
                               )
                               .toList(),
                         ),
+                        if (result.towerContributions.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Tower Stats',
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          ...result.towerContributions
+                              .take(4)
+                              .map((stat) => _ContributionRow(stat: stat)),
+                        ],
                       ],
                     ),
                   ),
@@ -957,6 +972,52 @@ class _RunResultOverlay extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _ContributionRow extends StatelessWidget {
+  final TowerContribution stat;
+  const _ContributionRow({required this.stat});
+
+  @override
+  Widget build(BuildContext context) {
+    final extras = <String>[];
+    if (stat.kills > 0) extras.add('${stat.kills} KO');
+    if (stat.slows > 0) extras.add('${stat.slows} slow');
+    if (stat.blockSeconds >= 1) {
+      extras.add('${stat.blockSeconds.toStringAsFixed(0)}s block');
+    }
+    final detail = extras.isEmpty ? '' : '  ${extras.join(' · ')}';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Text(stat.icon, style: const TextStyle(fontSize: 15)),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              stat.name,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white70, fontSize: 11),
+            ),
+          ),
+          Flexible(
+            child: Text(
+              '${stat.damage.toStringAsFixed(0)} dmg$detail',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

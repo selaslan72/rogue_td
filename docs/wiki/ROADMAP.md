@@ -244,8 +244,9 @@ Runs should feel less repetitive over time:
 
 Balancing will get harder as content grows:
 
-- Track per-tower damage or contribution during a run.
-- Show a compact run summary for tower performance.
+- Done: track per-tower-type damage, kills, slow applications, and Barracks
+  block time during a run.
+- Done: show a compact tower performance summary on the run result screen.
 - Use this data to tune waves, maps, tower costs, and upgrades.
 
 ### Professional Presentation And Polish

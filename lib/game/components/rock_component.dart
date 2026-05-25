@@ -56,14 +56,16 @@ class RockComponent extends PositionComponent
   double get bodyRadius => 14.0 * sizeScale;
 
   @override
-  void takeDamage(double amount) {
-    if (_hp <= 0) return;
+  double takeDamage(double amount) {
+    if (_hp <= 0) return 0;
+    final dealt = amount.clamp(0.0, _hp);
     _hp -= amount;
     _hitFlash = 1.0;
     if (_hp <= 0 && isMounted) {
       onDestroyed?.call(this);
       removeFromParent();
     }
+    return dealt;
   }
 
   @override
