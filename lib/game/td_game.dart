@@ -547,6 +547,84 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     startNextWave();
   }
 
+  void debugAddGold([int amount = 500]) {
+    if (!kDebugMode || runEnded) return;
+    gold += amount;
+    goldNotifier.value = gold;
+    _flashMessage('Debug +$amount gold');
+  }
+
+  void debugAdjustLives(int delta) {
+    if (!kDebugMode || runEnded) return;
+    lives = (lives + delta).clamp(1, 99);
+    livesNotifier.value = lives;
+    _flashMessage('Debug lives: $lives');
+  }
+
+  void debugStartOrSkipWave() {
+    if (!kDebugMode || runEnded) return;
+    if (upgradePickNotifier.value != null) {
+      pickTowerUpgrade(null);
+      return;
+    }
+    if (placementPhaseNotifier.value) {
+      startFirstWave();
+      return;
+    }
+    if (waveActive) {
+      _debugClearActiveWave();
+      return;
+    }
+    startNextWave();
+  }
+
+  void debugSpawnTestWave() {
+    if (!kDebugMode || runEnded) return;
+    if (placementPhaseNotifier.value) {
+      placementPhaseNotifier.value = false;
+    }
+    upgradePickNotifier.value = null;
+    resumeEngine();
+    final enemies = [
+      EnemyRegistry.basic,
+      EnemyRegistry.basic,
+      EnemyRegistry.fast,
+      EnemyRegistry.tank,
+      EnemyRegistry.flying,
+    ];
+    for (final def in enemies) {
+      add(
+        EnemyComponent(
+          def: def,
+          waypoints: currentMap.waypoints,
+          onKilled: _onEnemyKilled,
+          onLeaked: _onEnemyLeaked,
+          hpMultiplier: 0.75 * level.hpMul,
+          speedMultiplier: 0.9 * level.speedMul,
+        ),
+      );
+    }
+    waveActive = true;
+    _flashMessage('Debug test wave');
+  }
+
+  void _debugClearActiveWave() {
+    _waveQueue.clear();
+    waveEnemiesRemaining = 0;
+    for (final enemy in children.whereType<EnemyComponent>().toList()) {
+      enemy.removeFromParent();
+    }
+    waveActive = false;
+    gold += wave == maxWaves ? 0 : 50;
+    goldNotifier.value = gold;
+    if (wave >= maxWaves) {
+      _endRun(victory: true);
+    } else {
+      _flashMessage('Debug wave cleared');
+      _showWaveReward();
+    }
+  }
+
   // ─── Run sonlandırma + yeni run ───────────────────────────────────────────
 
   void _endRun({required bool victory}) {

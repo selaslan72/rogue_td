@@ -1,4 +1,5 @@
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../data/level_registry.dart';
@@ -55,6 +56,12 @@ class _GameScreenState extends State<GameScreen> {
                     right: 8,
                     child: _SpeedButton(game: _game),
                   ),
+                  if (kDebugMode)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: _DebugToolsPanel(game: _game),
+                    ),
                 ],
               ),
             ),
@@ -1064,6 +1071,163 @@ class _SpeedButton extends StatelessWidget {
               color: speed > 1.0 ? Colors.white : Colors.white70,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DebugToolsPanel extends StatefulWidget {
+  final TdGame game;
+  const _DebugToolsPanel({required this.game});
+
+  @override
+  State<_DebugToolsPanel> createState() => _DebugToolsPanelState();
+}
+
+class _DebugToolsPanelState extends State<_DebugToolsPanel> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_expanded) {
+      return Tooltip(
+        message: 'Debug tools',
+        child: Material(
+          color: const Color(0xCC1A1A2E),
+          borderRadius: BorderRadius.circular(8),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => setState(() => _expanded = true),
+            child: const SizedBox(
+              width: 40,
+              height: 40,
+              child: Icon(
+                Icons.construction_rounded,
+                color: Color(0xFFFBBF24),
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Material(
+      color: const Color(0xE61A1A2E),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 236,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0x88FBBF24), width: 1.2),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.construction_rounded,
+                  color: Color(0xFFFBBF24),
+                  size: 16,
+                ),
+                const SizedBox(width: 6),
+                const Expanded(
+                  child: Text(
+                    'DEBUG',
+                    style: TextStyle(
+                      color: Color(0xFFFBBF24),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+                InkWell(
+                  borderRadius: BorderRadius.circular(6),
+                  onTap: () => setState(() => _expanded = false),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(Icons.close, color: Colors.white54, size: 16),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _DebugToolButton(
+                  icon: Icons.attach_money_rounded,
+                  label: '+500',
+                  onPressed: () => widget.game.debugAddGold(),
+                ),
+                _DebugToolButton(
+                  icon: Icons.fast_forward_rounded,
+                  label: 'Wave',
+                  onPressed: widget.game.debugStartOrSkipWave,
+                ),
+                _DebugToolButton(
+                  icon: Icons.groups_rounded,
+                  label: 'Test',
+                  onPressed: widget.game.debugSpawnTestWave,
+                ),
+                _DebugToolButton(
+                  icon: Icons.favorite_rounded,
+                  label: '+1',
+                  onPressed: () => widget.game.debugAdjustLives(1),
+                ),
+                _DebugToolButton(
+                  icon: Icons.heart_broken_rounded,
+                  label: '-1',
+                  onPressed: () => widget.game.debugAdjustLives(-1),
+                ),
+                _DebugToolButton(
+                  icon: Icons.restart_alt_rounded,
+                  label: 'Reset',
+                  onPressed: widget.game.restartLevel,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DebugToolButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  const _DebugToolButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 68,
+      height: 34,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 14),
+        label: Text(
+          label,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.white,
+          side: const BorderSide(color: Colors.white24),
+          padding: const EdgeInsets.symmetric(horizontal: 5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
         ),
       ),
     );

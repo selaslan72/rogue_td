@@ -156,8 +156,9 @@ MVP progression decision:
 
 Speed up development and balance passes with debug-only tools:
 
-- Keep all levels selectable in local/debug runs.
-- Add a debug HUD for gold, wave skip, lives, and quick enemy spawn tests.
+- Done: keep all levels selectable in local/debug runs.
+- Done: add a compact in-game debug HUD for gold, wave skip/start, lives,
+  current-level reset, and quick enemy spawn tests.
 - Add a map preview/test entry point so layouts can be inspected quickly.
 - Keep these tools out of release builds.
 
