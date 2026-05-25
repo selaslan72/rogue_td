@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flame/game.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../data/level_registry.dart';
+import '../data/tower_registry.dart';
 import '../game/components/tower_slot.dart';
 import '../game/components/tower_component.dart';
 import '../game/td_game.dart';
@@ -52,6 +55,7 @@ class _GameScreenState extends State<GameScreen> {
                   Positioned.fill(child: _WaveRewardOverlay(game: _game)),
                   Positioned.fill(child: _RunResultOverlay(game: _game)),
                   Positioned.fill(child: _PlacementStartOverlay(game: _game)),
+                  Positioned.fill(child: _WaveBannerOverlay(game: _game)),
                   Positioned(
                     top: 8,
                     right: 8,
@@ -207,7 +211,12 @@ class _TopHud extends StatelessWidget {
           ),
           ValueListenableBuilder<List<EnemyDef>>(
             valueListenable: game.wavePreviewNotifier,
-            builder: (_, preview, _) => _WavePreview(enemies: preview),
+            builder: (ctx, preview, _) => _WavePreview(
+              enemies: preview,
+              onTap: preview.isEmpty
+                  ? null
+                  : () => _showEnemySheet(ctx, preview),
+            ),
           ),
         ],
       ),
@@ -267,9 +276,188 @@ class _PlacementStartOverlay extends StatelessWidget {
   }
 }
 
+void _showEnemySheet(BuildContext context, List<EnemyDef> enemies) {
+  // Sadece benzersiz düşman türlerini göster
+  final seen = <String>{};
+  final unique = enemies.where((e) => seen.add(e.id)).toList();
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: const Color(0xFF1A1A2E),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => _EnemyEncyclopediaSheet(enemies: unique),
+  );
+}
+
+class _EnemyEncyclopediaSheet extends StatelessWidget {
+  final List<EnemyDef> enemies;
+  const _EnemyEncyclopediaSheet({required this.enemies});
+
+  static const _kindLabel = {
+    EnemyKind.fast: 'Fast',
+    EnemyKind.basic: 'Basic',
+    EnemyKind.tank: 'Tank',
+    EnemyKind.flying: 'Flying',
+    EnemyKind.boss: 'Boss',
+  };
+
+  static const _kindIcons = {
+    EnemyKind.fast: '⚡',
+    EnemyKind.basic: '●',
+    EnemyKind.tank: '■',
+    EnemyKind.flying: '◆',
+    EnemyKind.boss: '★',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'NEXT WAVE',
+                style: TextStyle(
+                  color: Color(0xFFFBBF24),
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                ),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: const Icon(Icons.close, color: Colors.white38, size: 18),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...enemies.map(
+            (e) => _EnemyStatRow(
+              enemy: e,
+              kindLabel: _kindLabel[e.kind]!,
+              kindIcon: _kindIcons[e.kind]!,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EnemyStatRow extends StatelessWidget {
+  final EnemyDef enemy;
+  final String kindLabel;
+  final String kindIcon;
+  const _EnemyStatRow({
+    required this.enemy,
+    required this.kindLabel,
+    required this.kindIcon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: enemy.color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Text(kindIcon, style: TextStyle(color: enemy.color, fontSize: 20)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  enemy.name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  kindLabel,
+                  style: TextStyle(
+                    color: enemy.color,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _MiniStat(label: 'HP', value: '${enemy.maxHp}'),
+          const SizedBox(width: 10),
+          _MiniStat(label: 'SPD', value: '${enemy.speed}'),
+          const SizedBox(width: 10),
+          _MiniStat(label: 'ARM', value: '${enemy.armor}'),
+          const SizedBox(width: 10),
+          _MiniStat(label: '💰', value: '${enemy.goldReward}'),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final String label;
+  final String value;
+  const _MiniStat({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 11,
+          ),
+        ),
+        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 9)),
+      ],
+    );
+  }
+}
+
 class _WavePreview extends StatelessWidget {
   final List<EnemyDef> enemies;
-  const _WavePreview({required this.enemies});
+  final VoidCallback? onTap;
+  const _WavePreview({required this.enemies, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    if (enemies.isEmpty) return const SizedBox.shrink();
+    final counts = <EnemyKind, int>{};
+    for (final enemy in enemies) {
+      counts[enemy.kind] = (counts[enemy.kind] ?? 0) + 1;
+    }
+
+    return GestureDetector(
+      onTap: onTap,
+      child: _WavePreviewContent(counts: counts, tappable: onTap != null),
+    );
+  }
+}
+
+class _WavePreviewContent extends StatelessWidget {
+  final Map<EnemyKind, int> counts;
+  final bool tappable;
+  const _WavePreviewContent({required this.counts, required this.tappable});
 
   static const _enemyIcons = {
     EnemyKind.fast: '⚡',
@@ -281,12 +469,6 @@ class _WavePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (enemies.isEmpty) return const SizedBox.shrink();
-    final counts = <EnemyKind, int>{};
-    for (final enemy in enemies) {
-      counts[enemy.kind] = (counts[enemy.kind] ?? 0) + 1;
-    }
-
     return Padding(
       padding: const EdgeInsets.only(top: 6),
       child: Row(
@@ -321,6 +503,14 @@ class _WavePreview extends StatelessWidget {
               ),
             ),
           ),
+          if (tappable) ...[
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.info_outline_rounded,
+              color: Colors.white24,
+              size: 12,
+            ),
+          ],
         ],
       ),
     );
@@ -957,9 +1147,24 @@ class _RunResultOverlay extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          ...result.towerContributions
-                              .take(4)
-                              .map((stat) => _ContributionRow(stat: stat)),
+                          Builder(
+                            builder: (context) {
+                              final maxDmg = result.towerContributions
+                                  .map((s) => s.damage)
+                                  .fold(1.0, math.max);
+                              return Column(
+                                children: result.towerContributions
+                                    .take(6)
+                                    .map(
+                                      (s) => _ContributionRow(
+                                        stat: s,
+                                        maxDamage: maxDmg,
+                                      ),
+                                    )
+                                    .toList(),
+                              );
+                            },
+                          ),
                         ],
                       ],
                     ),
@@ -978,43 +1183,79 @@ class _RunResultOverlay extends StatelessWidget {
 
 class _ContributionRow extends StatelessWidget {
   final TowerContribution stat;
-  const _ContributionRow({required this.stat});
+  final double maxDamage;
+  const _ContributionRow({required this.stat, required this.maxDamage});
 
   @override
   Widget build(BuildContext context) {
+    final barFraction = maxDamage > 0
+        ? (stat.damage / maxDamage).clamp(0.0, 1.0)
+        : 0.0;
+    final towerColor =
+        TowerRegistry.all
+            .where((c) => c.id == stat.towerId)
+            .map((c) => c.color)
+            .firstOrNull ??
+        const Color(0xFFFBBF24);
+
     final extras = <String>[];
-    if (stat.kills > 0) extras.add('${stat.kills} KO');
+    if (stat.kills > 0) extras.add('${stat.kills} kills');
     if (stat.slows > 0) extras.add('${stat.slows} slow');
     if (stat.blockSeconds >= 1) {
-      extras.add('${stat.blockSeconds.toStringAsFixed(0)}s block');
+      extras.add('${stat.blockSeconds.toStringAsFixed(0)}s blk');
     }
-    final detail = extras.isEmpty ? '' : '  ${extras.join(' · ')}';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(stat.icon, style: const TextStyle(fontSize: 15)),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              stat.name,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white70, fontSize: 11),
-            ),
-          ),
-          Flexible(
-            child: Text(
-              '${stat.damage.toStringAsFixed(0)} dmg$detail',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 11,
+          Row(
+            children: [
+              Text(stat.icon, style: const TextStyle(fontSize: 13)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  stat.name,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                ),
               ),
-            ),
+              Text(
+                '${stat.damage.toStringAsFixed(0)} dmg',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Row(
+            children: [
+              const SizedBox(width: 19),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: barFraction,
+                    minHeight: 4,
+                    backgroundColor: Colors.white10,
+                    valueColor: AlwaysStoppedAnimation(
+                      towerColor.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ),
+              ),
+              if (extras.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(
+                  extras.join(' · '),
+                  style: const TextStyle(color: Colors.white38, fontSize: 9),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -1361,6 +1602,109 @@ class _ResultRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wave Banner — wave geçişinde kısa animasyonlu bildirim.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _WaveBannerOverlay extends StatefulWidget {
+  final TdGame game;
+  const _WaveBannerOverlay({required this.game});
+
+  @override
+  State<_WaveBannerOverlay> createState() => _WaveBannerOverlayState();
+}
+
+class _WaveBannerOverlayState extends State<_WaveBannerOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _opacity;
+  late final Animation<double> _scale;
+  int _displayedWave = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _scale = Tween<double>(
+      begin: 0.82,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack));
+    widget.game.waveNotifier.addListener(_onWaveChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.game.waveNotifier.removeListener(_onWaveChanged);
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _onWaveChanged() {
+    final w = widget.game.waveNotifier.value;
+    if (w <= 0) return;
+    setState(() => _displayedWave = w);
+    _ctrl.forward(from: 0).then((_) {
+      Future.delayed(const Duration(milliseconds: 850), () {
+        if (mounted) _ctrl.reverse();
+      });
+    });
+  }
+
+  String get _bannerText {
+    if (_displayedWave == TdGame.maxWaves) return '💀  FINAL BOSS';
+    if (_displayedWave == 6) return '⚔️  BOSS WAVE $_displayedWave';
+    return 'WAVE  $_displayedWave / ${TdGame.maxWaves}';
+  }
+
+  Color get _bannerColor {
+    if (_displayedWave == TdGame.maxWaves) return const Color(0xFFEF4444);
+    if (_displayedWave == 6) return const Color(0xFF9333EA);
+    return const Color(0xFFFBBF24);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: FadeTransition(
+        opacity: _opacity,
+        child: Center(
+          child: ScaleTransition(
+            scale: _scale,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xE8000000),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _bannerColor, width: 1.8),
+                boxShadow: [
+                  BoxShadow(
+                    color: _bannerColor.withValues(alpha: 0.35),
+                    blurRadius: 28,
+                    spreadRadius: 3,
+                  ),
+                ],
+              ),
+              child: Text(
+                _bannerText,
+                style: TextStyle(
+                  color: _bannerColor,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 3.5,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
