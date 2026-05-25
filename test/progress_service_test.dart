@@ -31,6 +31,20 @@ void main() {
     expect(progress.isUnlocked(3, season: GameSeason.winter), isFalse);
   });
 
+  test('unlocks winter after enough spring stars', () async {
+    final progress = ProgressService.instance;
+
+    expect(progress.isSeasonUnlocked(GameSeason.spring), isTrue);
+    expect(progress.isSeasonUnlocked(GameSeason.winter), isFalse);
+
+    for (var levelId = 1; levelId <= 20; levelId++) {
+      await progress.setStars(levelId, 3, season: GameSeason.spring);
+    }
+
+    expect(progress.totalStarsFor(GameSeason.spring), 60);
+    expect(progress.isSeasonUnlocked(GameSeason.winter), isTrue);
+  });
+
   test('migrates legacy level stars into spring progress', () async {
     SharedPreferences.setMockInitialValues({'level_stars_v1': '{"1":3,"2":2}'});
 

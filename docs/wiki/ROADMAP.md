@@ -3,7 +3,7 @@
 This document captures product direction and larger feature ideas that should
 survive individual coding sessions.
 
-Last refreshed from code state: 2026-05-23.
+Last refreshed from code state: 2026-05-26.
 
 ## Season Modes: Spring And Winter
 
@@ -53,6 +53,9 @@ The season expansion is now partially implemented in code:
 - Progress is season-aware. Stars are stored by season and level, so `Spring 1`
   and `Winter 1` no longer collide. Legacy `level_stars_v1` progress migrates
   into Spring progress.
+- Winter unlocks in release builds after earning 60 Spring stars. The level
+  select screen communicates the requirement while debug builds keep Winter
+  selectable for testing.
 
 ### Recommended Architecture
 
@@ -86,10 +89,9 @@ Future option:
   level select screen, but the current selector is enough for testing the
   campaign structure.
 
-### Progression Rules To Decide
+### Progression Rules
 
-- Whether Winter unlocks after all 30 Spring levels, after a star threshold, or
-  after beating a final Spring boss.
+- Winter unlocks after a 60-star Spring threshold for MVP.
 - Whether Winter is just a visual season or also has gameplay changes such as
   faster enemies, ice armor, frozen paths, or harsher economy.
 - Whether fragments remain shared across seasons or eventually become
@@ -98,8 +100,7 @@ Future option:
 Resolved or leaning:
 
 - Stars should be season-aware so Spring and Winter level IDs cannot collide.
-- Level unlocks can continue to be based on stars, but the exact Winter unlock
-  threshold still needs a product decision.
+- Level unlocks continue to be based on season-specific stars.
 
 ### Implementation Phases
 
@@ -114,7 +115,8 @@ Resolved or leaning:
 6. **Done:** register 30 Winter levels with winter visuals and scaling.
 7. **Done:** make saved stars season-aware so `Spring 1` and `Winter 1` cannot
    collide.
-8. **Next:** decide the real Winter unlock rule and make the UI communicate it.
+8. **Done:** unlock Winter at 60 Spring stars and communicate the requirement
+   in level select.
 9. **Next:** playtest the new Spring/Winter layouts and tune path, slot,
    obstacle, HP, speed, and star requirements.
 
@@ -146,9 +148,9 @@ Season-aware progress is implemented:
 - Tests cover Spring/Winter star separation, unlock separation, and legacy
   migration.
 
-Remaining progression decision:
+MVP progression decision:
 
-- Decide when Winter should unlock in release builds.
+- Winter unlocks in release builds after 60 Spring stars.
 
 ### Developer Testing Tools
 
@@ -295,6 +297,5 @@ The game currently has:
 
 Current known technical debt:
 
-- Winter unlock rules are not finalized for release builds.
 - Spring maps still need the same readability QA pass that Winter just received;
   Spring 22 was flagged as especially poor and should be redesigned next.

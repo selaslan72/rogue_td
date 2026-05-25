@@ -62,8 +62,18 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
               const SizedBox(height: 8),
               _SeasonPicker(
                 selected: _season,
+                progress: progress,
                 onSelected: (season) => setState(() => _season = season),
               ),
+              if (!progress.isSeasonUnlocked(GameSeason.winter) &&
+                  !kDebugMode) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Winter için ${ProgressService.winterUnlockSpringStars} Spring yıldızı gerekli',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+              ],
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -132,16 +142,21 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
 
 class _SeasonPicker extends StatelessWidget {
   final GameSeason selected;
+  final ProgressService progress;
   final ValueChanged<GameSeason> onSelected;
 
-  const _SeasonPicker({required this.selected, required this.onSelected});
+  const _SeasonPicker({
+    required this.selected,
+    required this.progress,
+    required this.onSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: GameSeason.values.map((season) {
         final isSelected = season == selected;
-        final isLocked = season.locked;
+        final isLocked = season.locked && !progress.isSeasonUnlocked(season);
         final canSelect = !isLocked || kDebugMode;
         final accent = isSelected ? const Color(0xFFFBBF24) : Colors.white30;
         return Expanded(

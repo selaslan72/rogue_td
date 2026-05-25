@@ -10,6 +10,8 @@ class ProgressService {
   ProgressService._();
   static final instance = ProgressService._();
 
+  static const winterUnlockSpringStars = 60;
+
   static const _legacyStarsKey = 'level_stars_v1';
   static const _seasonStarsKey = 'level_stars_by_season_v2';
   static const _fragmentsKey = 'total_fragments_v1';
@@ -52,6 +54,16 @@ class ProgressService {
 
   bool isUnlocked(int starsRequired, {GameSeason season = GameSeason.spring}) =>
       totalStarsFor(season) >= starsRequired;
+
+  bool isSeasonUnlocked(GameSeason season) {
+    switch (season.id) {
+      case 'winter':
+        return totalStarsFor(GameSeason.spring) >= winterUnlockSpringStars;
+      case 'spring':
+      default:
+        return true;
+    }
+  }
 
   /// Verilen bölüm için yıldızı kaydet (sadece daha yüksekse).
   Future<void> setStars(
