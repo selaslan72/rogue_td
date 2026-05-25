@@ -20,6 +20,9 @@ class EnemyComponent extends PositionComponent implements Damageable {
   int _waypointIndex = 1;
   double _slowMultiplier = 1.0;
   double _slowTimer = 0;
+  double _burnDps = 0.0;
+  double _burnTimer = 0.0;
+  Color _burnColor = const Color(0xFFF97316);
   double _animTime = 0;
 
   static final _hpBgPaint = Paint()..color = const Color(0xCC1A1A1A);
@@ -32,6 +35,10 @@ class EnemyComponent extends PositionComponent implements Damageable {
   static final _chestBeltPaint = Paint()..color = Colors.black38;
   static final _slowRingPaint = Paint()
     ..color = const Color(0x8838BDF8)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2;
+  static final _burnPaint = Paint()
+    ..color = const Color(0xAAF97316)
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
 
@@ -86,8 +93,28 @@ class EnemyComponent extends PositionComponent implements Damageable {
 
   @override
   void takeDamage(double amount) {
+    takeDamageWithArmorPierce(amount, 0);
+  }
+
+  void takeDamageWithArmorPierce(double amount, double armorPierce) {
     if (!isAlive) return;
-    final effective = (amount - def.armor - _armorBonus).clamp(0.0, double.infinity);
+    final armor = (def.armor + _armorBonus - armorPierce).clamp(
+      0.0,
+      double.infinity,
+    );
+    final effective = (amount - armor).clamp(0.0, double.infinity);
+    _applyDamage(effective);
+  }
+
+  void applyBurn(double dps, double duration, Color color) {
+    if (!isAlive) return;
+    _burnDps = max(_burnDps, dps);
+    _burnTimer = max(_burnTimer, duration);
+    _burnColor = color;
+  }
+
+  void _applyDamage(double effective) {
+    if (!isAlive || effective <= 0) return;
     _hp -= effective;
     if (_hp <= 0) {
       _hp = 0;
@@ -127,6 +154,13 @@ class EnemyComponent extends PositionComponent implements Damageable {
     if (!isAlive) return;
 
     _animTime += dt;
+
+    if (_burnTimer > 0) {
+      _burnTimer -= dt;
+      _applyDamage(_burnDps * dt);
+      if (_burnTimer <= 0) _burnDps = 0;
+      if (!isAlive) return;
+    }
 
     if (_slowTimer > 0) {
       _slowTimer -= dt;
@@ -173,6 +207,14 @@ class EnemyComponent extends PositionComponent implements Damageable {
         Offset(size.x / 2, size.y / 2),
         size.x / 2 + 2,
         _slowRingPaint,
+      );
+    }
+    if (_burnTimer > 0) {
+      _burnPaint.color = _burnColor.withValues(alpha: 0.72);
+      canvas.drawCircle(
+        Offset(size.x / 2, size.y / 2),
+        size.x / 2 + 4 + sin(_animTime * 18),
+        _burnPaint,
       );
     }
   }

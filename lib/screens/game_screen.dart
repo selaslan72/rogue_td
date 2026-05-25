@@ -56,6 +56,11 @@ class _GameScreenState extends State<GameScreen> {
                     right: 8,
                     child: _SpeedButton(game: _game),
                   ),
+                  Positioned(
+                    top: 8,
+                    right: 56,
+                    child: _PauseButton(game: _game),
+                  ),
                   if (kDebugMode)
                     Positioned(
                       top: 8,
@@ -1069,6 +1074,42 @@ class _SpeedButton extends StatelessWidget {
               fontSize: 13,
               fontWeight: FontWeight.bold,
               color: speed > 1.0 ? Colors.white : Colors.white70,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PauseButton extends StatelessWidget {
+  final TdGame game;
+  const _PauseButton({required this.game});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: game.pauseNotifier,
+      builder: (_, paused, _) => Tooltip(
+        message: paused ? 'Devam et' : 'Durdur',
+        child: GestureDetector(
+          onTap: game.togglePause,
+          child: Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: paused ? const Color(0xCCFBBF24) : const Color(0xAA1A1A2E),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: paused ? const Color(0xFFFBBF24) : Colors.white30,
+                width: 1.2,
+              ),
+            ),
+            child: Icon(
+              paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+              color: paused ? Colors.white : Colors.white70,
+              size: 22,
             ),
           ),
         ),

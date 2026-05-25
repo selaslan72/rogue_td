@@ -20,6 +20,9 @@ class ProjectileComponent extends PositionComponent {
   final double splashRadius;
   final double slowAmount;
   final double slowDuration;
+  final double armorPierce;
+  final double burnDps;
+  final double burnDuration;
   final double impactRadius;
 
   Vector2? _lastTargetPos;
@@ -35,6 +38,9 @@ class ProjectileComponent extends PositionComponent {
     this.splashRadius = 0,
     this.slowAmount = 0,
     this.slowDuration = 0,
+    this.armorPierce = 0,
+    this.burnDps = 0,
+    this.burnDuration = 0,
     this.impactRadius = 0,
   }) : super(
          position: worldPosition,
@@ -83,9 +89,18 @@ class ProjectileComponent extends PositionComponent {
 
     final impactPos = position.clone();
     if (target.isMounted && target.isAlive) {
-      target.takeDamage(damage);
-      if (slowAmount > 0 && target is EnemyComponent) {
-        (target as EnemyComponent).applySlow(slowAmount, slowDuration);
+      if (target is EnemyComponent) {
+        (target as EnemyComponent).takeDamageWithArmorPierce(
+          damage,
+          armorPierce,
+        );
+      } else {
+        target.takeDamage(damage);
+      }
+      if (target is EnemyComponent) {
+        final enemy = target as EnemyComponent;
+        if (slowAmount > 0) enemy.applySlow(slowAmount, slowDuration);
+        if (burnDps > 0) enemy.applyBurn(burnDps, burnDuration, color);
       }
     }
     // Splash sadece düşmana atılan mermi için yayılır; engele (ağaç/kaya/çalı)
@@ -95,7 +110,7 @@ class ProjectileComponent extends PositionComponent {
         if (identical(d, target)) continue;
         if (!d.isAlive) continue;
         if (d.worldPosition.distanceTo(impactPos) <= splashRadius) {
-          d.takeDamage(damage * 0.6);
+          d.takeDamageWithArmorPierce(damage * 0.6, armorPierce);
         }
       }
     }
@@ -160,10 +175,10 @@ class ProjectileComponent extends PositionComponent {
       case ProjectileVisual.iceShard:
         // Kristal kama: +x yönünde uçar
         final crystal = Path()
-          ..moveTo(8, 0)        // ileri uç
+          ..moveTo(8, 0) // ileri uç
           ..lineTo(3, -3.5)
           ..lineTo(-5, -2)
-          ..lineTo(-8, 0)       // arka uç
+          ..lineTo(-8, 0) // arka uç
           ..lineTo(-5, 2)
           ..lineTo(3, 3.5)
           ..close();
@@ -202,10 +217,7 @@ class ProjectileComponent extends PositionComponent {
           ..lineTo(-14, 0)
           ..lineTo(-10, 3)
           ..close();
-        canvas.drawPath(
-          trail,
-          Paint()..color = color.withValues(alpha: 0.55),
-        );
+        canvas.drawPath(trail, Paint()..color = color.withValues(alpha: 0.55));
         // Dış parıltı
         canvas.drawCircle(
           Offset.zero,

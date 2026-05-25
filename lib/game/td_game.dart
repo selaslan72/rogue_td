@@ -90,6 +90,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
   // Hız çarpanı — debug testlerinde 4x'e kadar çıkar.
   double _gameSpeed = 1.0;
   final ValueNotifier<double> speedNotifier = ValueNotifier(1.0);
+  final ValueNotifier<bool> pauseNotifier = ValueNotifier(false);
 
   void toggleSpeed() {
     final next = switch (_gameSpeed) {
@@ -99,6 +100,20 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     };
     _gameSpeed = next;
     speedNotifier.value = next;
+  }
+
+  void togglePause() {
+    if (runEnded) return;
+    if (pauseNotifier.value) {
+      pauseNotifier.value = false;
+      if (upgradePickNotifier.value == null &&
+          runResultNotifier.value == null) {
+        resumeEngine();
+      }
+    } else {
+      pauseNotifier.value = true;
+      pauseEngine();
+    }
   }
 
   // Wave spawning
@@ -537,7 +552,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
       _flashMessage('${tower.card.name} → Lv.${tower.level}');
     }
     upgradePickNotifier.value = null;
-    resumeEngine();
+    if (!pauseNotifier.value) resumeEngine();
     if (!runEnded && lives > 0) startNextWave();
   }
 
@@ -694,6 +709,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     wavePreviewNotifier.value = [];
     runResultNotifier.value = null;
     upgradePickNotifier.value = null;
+    pauseNotifier.value = false;
     placementPhaseNotifier.value = false;
 
     unlockedTowers

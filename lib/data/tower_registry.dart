@@ -9,7 +9,7 @@ class TowerRegistry {
   static const archer = TowerCard(
     id: 'archer',
     name: 'Archer',
-    description: 'Single target, fast attack speed.',
+    description: 'Long range precision shots; every 4th hit crits.',
     rarity: TowerRarity.common,
     type: TowerType.singleTarget,
     baseCost: 50,
@@ -23,7 +23,7 @@ class TowerRegistry {
   static const cannon = TowerCard(
     id: 'cannon',
     name: 'Cannon',
-    description: 'Splash damage, slow attack.',
+    description: 'Splash damage that pierces armor.',
     rarity: TowerRarity.common,
     type: TowerType.splash,
     baseCost: 80,
@@ -51,7 +51,7 @@ class TowerRegistry {
   static const flame = TowerCard(
     id: 'flame',
     name: 'Flame',
-    description: 'Damage over time, short range.',
+    description: 'Short range fire that burns enemies over time.',
     rarity: TowerRarity.common,
     type: TowerType.damageOverTime,
     baseCost: 75,
@@ -90,7 +90,14 @@ class TowerRegistry {
     icon: '⚡',
   );
 
-  static const List<TowerCard> all = [archer, cannon, frost, flame, tesla, barracks];
+  static const List<TowerCard> all = [
+    archer,
+    cannon,
+    frost,
+    flame,
+    tesla,
+    barracks,
+  ];
 
   static TowerCard byId(String id) =>
       all.firstWhere((c) => c.id == id, orElse: () => archer);

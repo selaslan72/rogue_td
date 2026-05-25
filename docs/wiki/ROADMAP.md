@@ -222,12 +222,14 @@ grows further:
 
 Each tower should have a memorable gameplay identity:
 
-- Archer: long range, precision, or crit-style behavior.
-- Cannon: splash pressure and armor-breaking role.
-- Frost: area control and slow tuning.
-- Flame: damage-over-time and crowd pressure.
-- Tesla: chain lightning plus network/link synergy.
-- Barracks: blocking, soldier positioning, and lane control.
+- Done: Archer has long-range precision behavior with every fourth shot
+  becoming a visible crit.
+- Done: Cannon keeps splash pressure and now pierces armor, making it the
+  anti-tank/boss pressure pick.
+- Done: Frost is an area-control slow zone with boss-safe tuning.
+- Done: Flame applies visible burn damage over time for crowd pressure.
+- Done: Tesla chains lightning and gains link synergy from nearby Tesla towers.
+- Done: Barracks creates soldiers for blocking, positioning, and lane control.
 
 ### Roguelike Run Variety
 

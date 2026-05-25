@@ -27,6 +27,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   double _cooldown = 0;
   Damageable? _currentTarget;
   double _muzzleFlash = 0;
+  int _precisionShotCounter = 0;
 
   static const int _teslaMaxLinks = 3;
   static const double _teslaDamageBonusPerLink = 0.10;
@@ -216,14 +217,17 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     if (target is! EnemyComponent) {
       switch (card.type) {
         case TowerType.singleTarget:
+          _precisionShotCounter++;
+          final isCrit = card.id == 'archer' && _precisionShotCounter % 4 == 0;
           parent?.add(
             ProjectileComponent(
               worldPosition: position.clone(),
               target: target,
-              damage: currentDamage,
+              damage: isCrit ? currentDamage * 2.4 : currentDamage,
               color: card.color,
               visual: ProjectileVisual.arrow,
-              speed: 360,
+              speed: isCrit ? 460 : 360,
+              impactRadius: isCrit ? 18 : 0,
             ),
           );
         case TowerType.splash:
@@ -236,6 +240,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
               visual: ProjectileVisual.ball,
               speed: 240,
               splashRadius: 60,
+              armorPierce: 6 + level * 3,
             ),
           );
         default:
@@ -246,14 +251,17 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     }
     switch (card.type) {
       case TowerType.singleTarget:
+        _precisionShotCounter++;
+        final isCrit = card.id == 'archer' && _precisionShotCounter % 4 == 0;
         parent?.add(
           ProjectileComponent(
             worldPosition: position.clone(),
             target: target,
-            damage: currentDamage,
+            damage: isCrit ? currentDamage * 2.4 : currentDamage,
             color: card.color,
             visual: ProjectileVisual.arrow,
-            speed: 360,
+            speed: isCrit ? 460 : 360,
+            impactRadius: isCrit ? 18 : 0,
           ),
         );
       case TowerType.splash:
@@ -266,6 +274,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
             visual: ProjectileVisual.ball,
             speed: 240,
             splashRadius: 60,
+            armorPierce: 6 + level * 3,
           ),
         );
       case TowerType.slow:
@@ -287,10 +296,12 @@ class TowerComponent extends PositionComponent with TapCallbacks {
           ProjectileComponent(
             worldPosition: position.clone(),
             target: target,
-            damage: currentDamage,
+            damage: currentDamage * 0.55,
             color: card.color,
             visual: ProjectileVisual.fireball,
             speed: 210,
+            burnDps: currentDamage * 0.65,
+            burnDuration: 2.0 + level * 0.5,
             impactRadius: 16,
           ),
         );
