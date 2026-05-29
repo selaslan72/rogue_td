@@ -5,6 +5,7 @@ import '../models/game_season.dart';
 import '../models/level_def.dart';
 import '../services/progress_service.dart';
 import 'game_screen.dart';
+import 'rune_shop_screen.dart';
 
 /// Bölüm seçim ekranı. Toplam yıldız sayısına göre bölümler kilitlenir.
 class LevelSelectScreen extends StatefulWidget {
@@ -31,6 +32,13 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => GameScreen(level: level)));
     if (mounted) setState(() {}); // dönüşte yıldız sayısı yenilensin
+  }
+
+  Future<void> _openShop() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const RuneShopScreen()),
+    );
+    if (mounted) setState(() {}); // fragment sayısı dönüşte yenilensin
   }
 
   @override
@@ -100,7 +108,27 @@ class _LevelSelectScreenState extends State<LevelSelectScreen> {
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white38, fontSize: 12),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
+              OutlinedButton.icon(
+                onPressed: _openShop,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFA78BFA),
+                  side: const BorderSide(color: Color(0x80A78BFA)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                icon: const Text('💎', style: TextStyle(fontSize: 16)),
+                label: Text(
+                  'RÜN ATÖLYESİ  ·  ${progress.totalFragments} fragment',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
               Expanded(
                 child: GridView.builder(
                   itemCount: levels.length,

@@ -15,8 +15,10 @@ class ProgressService {
   static const _legacyStarsKey = 'level_stars_v1';
   static const _seasonStarsKey = 'level_stars_by_season_v2';
   static const _fragmentsKey = 'total_fragments_v1';
+  static const _perksKey = 'meta_perks_v1';
 
   Map<String, int> _stars = {};
+  Map<String, int> _perks = {};
   int _totalFragments = 0;
   bool _loaded = false;
 
@@ -35,6 +37,15 @@ class ProgressService {
       _stars = await _migrateLegacySpringStars(prefs);
     }
     _totalFragments = prefs.getInt(_fragmentsKey) ?? 0;
+    final perksRaw = prefs.getString(_perksKey);
+    if (perksRaw != null) {
+      try {
+        final decoded = jsonDecode(perksRaw) as Map<String, dynamic>;
+        _perks = decoded.map((k, v) => MapEntry(k, v as int));
+      } catch (_) {
+        _perks = {};
+      }
+    }
     _loaded = true;
   }
 
@@ -88,14 +99,34 @@ class ProgressService {
     await prefs.setInt(_fragmentsKey, _totalFragments);
   }
 
+  // ─── Meta perk'ler (fragment ile satın alınan kalıcı upgrade'ler) ──────────
+
+  int perkLevel(String perkId) => _perks[perkId] ?? 0;
+
+  /// Fragment yeterliyse perk'i bir seviye yükseltir ve fragment'leri düşer.
+  /// Başarılı olursa `true` döner. UI maxLevel kontrolünü kendi yapmalı;
+  /// burada sadece fragment yeterliliği garanti edilir.
+  Future<bool> buyPerk(String perkId, int cost) async {
+    await load();
+    if (cost <= 0 || _totalFragments < cost) return false;
+    _totalFragments -= cost;
+    _perks[perkId] = (_perks[perkId] ?? 0) + 1;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_fragmentsKey, _totalFragments);
+    await prefs.setString(_perksKey, jsonEncode(_perks));
+    return true;
+  }
+
   Future<void> reset() async {
     _stars.clear();
+    _perks.clear();
     _totalFragments = 0;
     _loaded = false;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_legacyStarsKey);
     await prefs.remove(_seasonStarsKey);
     await prefs.remove(_fragmentsKey);
+    await prefs.remove(_perksKey);
   }
 
   Future<Map<String, int>> _migrateLegacySpringStars(
@@ -127,6 +158,7 @@ class ProgressService {
   Future<void> reloadForTesting() async {
     _loaded = false;
     _stars.clear();
+    _perks.clear();
     _totalFragments = 0;
     await load();
   }

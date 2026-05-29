@@ -9,6 +9,7 @@ import '../data/enemy_registry.dart';
 import '../data/tower_registry.dart';
 import '../models/enemy_def.dart';
 import '../models/level_def.dart';
+import '../models/meta_perk.dart';
 import '../models/run_result.dart';
 import '../models/tower_card.dart';
 import '../models/tower_contribution.dart';
@@ -40,6 +41,11 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
   int lives = initialLives;
   int gold = initialGold;
   int wave = 0;
+
+  // Fragment ile alınan kalıcı perk'lerden gelen kule çarpanları.
+  // Run başında [_applyMetaBonuses] ile güncellenir; tower'lar buradan okur.
+  double metaDamageMul = 1.0;
+  double metaRangeMul = 1.0;
   int waveEnemiesRemaining = 0;
   bool waveActive = false;
   bool runEnded = false;
@@ -174,9 +180,22 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
   Future<void> onLoad() async {
     await super.onLoad();
     camera.viewfinder.visibleGameSize = Vector2(480, 800);
+    _applyMetaBonuses();
+    livesNotifier.value = lives;
+    goldNotifier.value = gold;
     _buildMap(level.map);
     _updateWavePreview();
     _enterPlacementPhase();
+  }
+
+  /// Fragment perk'lerinden gelen başlangıç altını/canı ve kule çarpanlarını
+  /// uygular. İlk run (onLoad) ve her yeni run (startNewRun) başında çağrılır.
+  void _applyMetaBonuses() {
+    final bonuses = MetaBonuses.fromProgress(ProgressService.instance);
+    lives = initialLives + bonuses.bonusLives;
+    gold = initialGold + bonuses.bonusGold;
+    metaDamageMul = bonuses.damageMul;
+    metaRangeMul = bonuses.rangeMul;
   }
 
   // ─── Harita kurulumu ──────────────────────────────────────────────────────
@@ -737,8 +756,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
   void startNewRun() {
     // State sıfırla
     runEnded = false;
-    lives = initialLives;
-    gold = initialGold;
+    _applyMetaBonuses();
     wave = 0;
     waveEnemiesRemaining = 0;
     waveActive = false;

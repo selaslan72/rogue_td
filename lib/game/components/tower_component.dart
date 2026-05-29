@@ -79,8 +79,19 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   double get _rangeMul => 1.0 + (level - 1) * 0.10;
   double get _fireRateMul => 1.0 + (level - 1) * 0.20;
 
-  double get currentDamage => card.damage * _damageMul;
-  double get currentRange => card.range * _rangeMul;
+  // Fragment perk'lerinden gelen kalıcı çarpanlar (run boyunca sabit).
+  double get _metaDamageMul {
+    final g = findGame();
+    return g is TdGame ? g.metaDamageMul : 1.0;
+  }
+
+  double get _metaRangeMul {
+    final g = findGame();
+    return g is TdGame ? g.metaRangeMul : 1.0;
+  }
+
+  double get currentDamage => card.damage * _damageMul * _metaDamageMul;
+  double get currentRange => card.range * _rangeMul * _metaRangeMul;
   double get currentFireRate => card.fireRate * _fireRateMul;
 
   bool get canUpgrade => level < 3;
