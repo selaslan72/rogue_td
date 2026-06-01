@@ -15,6 +15,29 @@ assistant.
 
 ## Current Handoff
 
+### 2026-05-30 — Fragment Rün Atölyesi (branch `claude/fragment-rune-shop`)
+
+**Commit `8bec124` yapıldı, HENÜZ PUSH EDİLMEDİ.** Kullanıcı "yarın devam ederiz" dedi.
+
+Fragment harcama yolu eklendi (meta progression'ın eksik ayağı):
+- `lib/models/meta_perk.dart` (yeni): 4 perk (Hazine/Surlar/Keskinlik/Kartal Gözü) + `MetaBonuses.fromProgress`.
+- `ProgressService`: `meta_perks_v1` kalıcı perk seviyeleri, `buyPerk`/`perkLevel`.
+- `td_game._applyMetaBonuses()`: run başında +altın/+can + kule hasar/menzil çarpanı (onLoad + startNewRun).
+- `tower_component`: currentDamage/currentRange meta çarpanı.
+- `lib/screens/rune_shop_screen.dart` (yeni) + level select'e "RÜN ATÖLYESİ" butonu.
+- `test/progress_service_test.dart`: 5 yeni test.
+- Doğrulama: `flutter analyze` temiz, `flutter test` 20/20, `flutter build web` OK.
+
+**Lokal preview:** `.claude/launch.json` (hem proje kökünde hem `raw/android apps/.claude/`) python http.server ile `build/web`'i port 8099'da servis ediyor. Şu an **debug build** servis ediliyor (kDebugMode → tüm bölümler açık, sadece lokal). Kod değişince `flutter build web --debug` ile yeniden derle.
+
+**Yarın için sıradaki adımlar:**
+1. Branch'i push et / PR (kullanıcı onayı bekliyor).
+2. Perk dengesini playtest et (maliyet/etki ilk tahmin; ~36 fragment/3★ run).
+3. Ses altyapısı (`flame_audio`) — artık en üst boşluk.
+4. Perk çeşitliliği fikri: kill-gold bounty, asker canı, vb.
+
+---
+
 ### 2026-05-07 — Codex Issue #4 fix (branch `claude/web-progress-fix`)
 
 **GitHub Issue #4 lokal olarak çözüldü.** Henüz commit/push yapılmadı.

@@ -73,12 +73,12 @@ class MetaPerks {
   static const eagleEye = MetaPerk(
     id: 'eagleEye',
     name: 'Kartal Gözü',
-    description: 'Tüm kulelere +%4 menzil',
+    description: 'Tüm kulelere +%5 menzil',
     icon: '🎯',
-    maxLevel: 4,
-    baseCost: 12,
-    costStep: 10,
-    perLevelValue: 0.04,
+    maxLevel: 5,
+    baseCost: 10,
+    costStep: 8,
+    perLevelValue: 0.05,
   );
 
   static const List<MetaPerk> all = [treasury, ramparts, sharpness, eagleEye];
