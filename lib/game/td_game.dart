@@ -13,6 +13,7 @@ import '../models/meta_perk.dart';
 import '../models/run_result.dart';
 import '../models/tower_card.dart';
 import '../models/tower_contribution.dart';
+import '../services/audio_service.dart';
 import '../services/progress_service.dart';
 import 'components/castle_component.dart';
 import 'components/damageable.dart';
@@ -374,6 +375,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     selectedTowerNotifier.value = card;
     gold -= card.baseCost;
     goldNotifier.value = gold;
+    AudioService.instance.play(SfxCue.place);
 
     slot.isOccupied = true;
     slot.isHighlighted = false;
@@ -434,6 +436,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     gold -= cost;
     goldNotifier.value = gold;
     tower.upgrade();
+    AudioService.instance.play(SfxCue.upgrade);
     tower.investedGold += cost;
     // Range circle gitsin ama panel açık kalsın (üst üste upgrade için)
     tower.showRange = false;
@@ -450,6 +453,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     tower.showRange = false;
     selectedExistingTowerNotifier.value = null;
     tower.removeFromParent();
+    AudioService.instance.play(SfxCue.sell);
     _flashMessage('Sold ${tower.card.name} (+$refund gold)');
   }
 
@@ -477,6 +481,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
           ? 'FINAL BOSS'
           : (wave == 6 ? 'BOSS WAVE $wave' : 'WAVE $wave'),
     );
+    AudioService.instance.play(SfxCue.waveStart);
   }
 
   /// Wave'in spawn kuyruğunu önceden hazırlar.
@@ -552,6 +557,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
         if (wave >= maxWaves) {
           _endRun(victory: true);
         } else {
+          AudioService.instance.play(SfxCue.waveClear);
           _showWaveReward();
         }
       }
@@ -581,12 +587,14 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
   void _onEnemyKilled(EnemyComponent enemy) {
     gold += enemy.def.goldReward;
     goldNotifier.value = gold;
+    AudioService.instance.play(SfxCue.enemyDie);
   }
 
   void _onEnemyLeaked(EnemyComponent enemy) {
     lives -= enemy.def.damageOnLeak;
     if (lives < 0) lives = 0;
     livesNotifier.value = lives;
+    AudioService.instance.play(SfxCue.leak);
     if (lives == 0) {
       _endRun(victory: false);
     }
@@ -610,6 +618,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
   void pickTowerUpgrade(TowerComponent? tower) {
     if (tower != null && tower.isMounted && tower.canUpgrade) {
       tower.upgrade();
+      AudioService.instance.play(SfxCue.upgrade);
       _flashMessage('${tower.card.name} → Lv.${tower.level}');
     }
     upgradePickNotifier.value = null;
@@ -737,6 +746,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
       towerContributions: _contributionSummary(),
       fragmentsEarned: fragmentsEarned,
     );
+    AudioService.instance.play(victory ? SfxCue.victory : SfxCue.defeat);
     pauseEngine();
   }
 

@@ -4,6 +4,7 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 import '../../models/tower_card.dart';
+import '../../services/audio_service.dart';
 import '../td_game.dart';
 import 'damageable.dart';
 import 'enemy_component.dart';
@@ -254,6 +255,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   }
 
   void _fire(Damageable target) {
+    _playShotSfx();
     if (target is! EnemyComponent) {
       switch (card.type) {
         case TowerType.singleTarget:
@@ -409,6 +411,24 @@ class TowerComponent extends PositionComponent with TapCallbacks {
     }
   }
 
+  void _playShotSfx() {
+    switch (card.type) {
+      case TowerType.singleTarget:
+        AudioService.instance.play(SfxCue.shotArrow);
+      case TowerType.splash:
+        AudioService.instance.play(SfxCue.shotCannon);
+      case TowerType.damageOverTime:
+        AudioService.instance.play(SfxCue.shotFire);
+      case TowerType.chain:
+        AudioService.instance.play(SfxCue.shotTesla);
+      case TowerType.barracks:
+        AudioService.instance.play(SfxCue.shotBarracks);
+      case TowerType.slow:
+      case TowerType.support:
+        break;
+    }
+  }
+
   void _updateBarracks(double dt) {
     for (int i = 0; i < _barracksCount; i++) {
       final s = _soldiers[i];
@@ -434,6 +454,7 @@ class TowerComponent extends PositionComponent with TapCallbacks {
   }
 
   void _spawnSoldier(int index) {
+    AudioService.instance.play(SfxCue.shotBarracks);
     final rally = _findRallyPoint();
     // 3 askere yol boyunca offset: birbirine binmesin
     final spread = (index - 1) * 12.0; // -12, 0, +12

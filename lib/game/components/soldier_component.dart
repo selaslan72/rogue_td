@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
+import '../../services/audio_service.dart';
 import 'damageable.dart';
 import 'enemy_component.dart';
 import 'particle_effect.dart';
@@ -142,6 +143,7 @@ class SoldierComponent extends PositionComponent implements Damageable {
       // Kontak: vur ve temas hasarı al
       if (_attackCd <= 0) {
         final wasAlive = t.isAlive;
+        AudioService.instance.play(SfxCue.shotBarracks);
         onDamageDealt?.call(t.takeDamage(damage));
         if (wasAlive && !t.isAlive) onKill?.call();
         _attackCd = 1.0 / fireRate;

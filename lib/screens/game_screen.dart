@@ -14,6 +14,7 @@ import '../models/level_def.dart';
 import '../models/run_result.dart';
 import '../models/tower_card.dart';
 import '../models/tower_contribution.dart';
+import '../services/audio_service.dart';
 import '../services/progress_service.dart';
 
 /// GameWidget'ı saran ekran. HUD overlay + tower seçici barı içerir.
@@ -66,6 +67,7 @@ class _GameScreenState extends State<GameScreen> {
                     right: 56,
                     child: _PauseButton(game: _game),
                   ),
+                  const Positioned(top: 8, right: 104, child: _SoundButton()),
                   if (kDebugMode)
                     Positioned(
                       top: 8,
@@ -78,6 +80,31 @@ class _GameScreenState extends State<GameScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _SoundButton extends StatelessWidget {
+  const _SoundButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: AudioService.instance.enabledNotifier,
+      builder: (_, enabled, _) {
+        return Material(
+          color: Colors.black45,
+          borderRadius: BorderRadius.circular(8),
+          child: IconButton(
+            tooltip: enabled ? 'Sesi kapat' : 'Sesi aç',
+            icon: Icon(
+              enabled ? Icons.volume_up : Icons.volume_off,
+              color: Colors.white,
+            ),
+            onPressed: AudioService.instance.toggleEnabled,
+          ),
+        );
+      },
     );
   }
 }
