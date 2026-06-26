@@ -202,36 +202,24 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
   // ─── Harita kurulumu ──────────────────────────────────────────────────────
 
   static final _forestRng = math.Random();
+  static const int _minInitialOpenSlots = 4;
+  static const int _maxInitialOpenSlots = 6;
 
   void _buildMap(GameMap map) {
     _clusters.clear();
     _nextClusterId = 0;
+    final layout = _randomizeStartingLayout(map);
 
     add(PathComponent(waypoints: map.waypoints, pathWidth: PathData.pathWidth));
     add(CastleComponent(worldPosition: map.waypoints.first, isEntry: true));
     add(CastleComponent(worldPosition: map.waypoints.last, isEntry: false));
 
-    for (final (cx, cy, _) in map.treePositions) {
-      final id = _nextClusterId++;
-      final center = Vector2(cx, cy);
-      // %30 çalı, %70 güçlü ağaç
-      final variant = _forestRng.nextDouble() < 0.30
-          ? (map.theme == MapTheme.winter
-                ? TreeVariant.snowBush
-                : TreeVariant.bush)
-          : (map.theme == MapTheme.winter
-                ? TreeVariant.snowPine
-                : TreeVariant.tree);
-      final tree = TreeComponent(
-        worldPosition: center.clone(),
-        sizeScale: 1.0,
-        variant: variant,
-        clusterId: id,
-        onDestroyed: (t) => _onObstacleDestroyed(t, t.clusterId),
-        onTap: _handleTreeTap,
+    for (final treeDef in layout.treePositions) {
+      _addTreeCluster(
+        center: Vector2(treeDef.$1, treeDef.$2),
+        scale: treeDef.$3,
+        theme: map.theme,
       );
-      _clusters[id] = _ObstacleCluster(center: center, remaining: {tree});
-      add(tree);
     }
 
     int rockSeed = 0;
@@ -253,7 +241,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
       add(rock);
     }
 
-    for (final slotPos in map.towerSlots) {
+    for (final slotPos in layout.openSlots) {
       add(
         TowerSlot(
           worldPosition: slotPos,
@@ -262,6 +250,94 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
         ),
       );
     }
+  }
+
+  _StartingLayout _randomizeStartingLayout(GameMap map) {
+    final openCount = _initialOpenSlotCount(map.towerSlots.length);
+    final openSlots = _pickSpreadSlots(map.towerSlots, openCount);
+    final openKeys = openSlots.map(_layoutKey).toSet();
+    final closedSlots = map.towerSlots
+        .where((slot) => !openKeys.contains(_layoutKey(slot)))
+        .toList(growable: false);
+
+    final trees = <(double, double, double)>[
+      ...map.treePositions,
+      for (final slot in closedSlots) (slot.x, slot.y, 0.94),
+    ]..shuffle(_forestRng);
+
+    return _StartingLayout(
+      openSlots: openSlots,
+      treePositions: List.unmodifiable(trees),
+    );
+  }
+
+  int _initialOpenSlotCount(int totalSlots) {
+    if (totalSlots <= _minInitialOpenSlots) return totalSlots;
+    final half = (totalSlots * 0.52).round();
+    return half.clamp(_minInitialOpenSlots, _maxInitialOpenSlots);
+  }
+
+  List<Vector2> _pickSpreadSlots(List<Vector2> slots, int count) {
+    if (slots.length <= count) return List<Vector2>.of(slots);
+    final bands = <List<Vector2>>[[], [], []];
+    for (final slot in slots) {
+      final band = ((slot.y / PathData.mapH) * bands.length).floor().clamp(
+        0,
+        bands.length - 1,
+      );
+      bands[band].add(slot);
+    }
+    for (final band in bands) {
+      band.shuffle(_forestRng);
+    }
+
+    final picked = <Vector2>[];
+    var cursor = _forestRng.nextInt(bands.length);
+    while (picked.length < count && picked.length < slots.length) {
+      final band = bands[cursor % bands.length];
+      if (band.isNotEmpty) {
+        picked.add(band.removeLast());
+      }
+      cursor++;
+      if (cursor > bands.length * slots.length * 2) break;
+    }
+
+    if (picked.length < count) {
+      final remaining =
+          slots
+              .where(
+                (slot) => !picked.any((p) => _layoutKey(p) == _layoutKey(slot)),
+              )
+              .toList()
+            ..shuffle(_forestRng);
+      picked.addAll(remaining.take(count - picked.length));
+    }
+
+    return List.unmodifiable(picked);
+  }
+
+  String _layoutKey(Vector2 v) => '${v.x.round()}:${v.y.round()}';
+
+  void _addTreeCluster({
+    required Vector2 center,
+    required double scale,
+    required MapTheme theme,
+  }) {
+    final id = _nextClusterId++;
+    // %25 çalı, %75 güçlü ağaç. Çalılar da slot açar ama daha hızlı kırılır.
+    final variant = _forestRng.nextDouble() < 0.25
+        ? (theme == MapTheme.winter ? TreeVariant.snowBush : TreeVariant.bush)
+        : (theme == MapTheme.winter ? TreeVariant.snowPine : TreeVariant.tree);
+    final tree = TreeComponent(
+      worldPosition: center.clone(),
+      sizeScale: scale,
+      variant: variant,
+      clusterId: id,
+      onDestroyed: (t) => _onObstacleDestroyed(t, t.clusterId),
+      onTap: _handleTreeTap,
+    );
+    _clusters[id] = _ObstacleCluster(center: center, remaining: {tree});
+    add(tree);
   }
 
   void _handleTreeTap(TreeComponent tree) => _toggleObstacleSelection(tree);
@@ -813,4 +889,11 @@ class _ObstacleCluster {
   final Vector2 center;
   final Set<PositionComponent> remaining;
   _ObstacleCluster({required this.center, required this.remaining});
+}
+
+class _StartingLayout {
+  final List<Vector2> openSlots;
+  final List<(double, double, double)> treePositions;
+
+  const _StartingLayout({required this.openSlots, required this.treePositions});
 }
