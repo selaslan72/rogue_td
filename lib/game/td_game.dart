@@ -223,7 +223,7 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     }
 
     int rockSeed = 0;
-    for (final (rx, ry, _) in map.rockPositions) {
+    for (final (rx, ry, _) in layout.rockPositions) {
       final id = _nextClusterId++;
       final center = Vector2(rx, ry);
       final rock = RockComponent(
@@ -260,15 +260,117 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
         .where((slot) => !openKeys.contains(_layoutKey(slot)))
         .toList(growable: false);
 
-    final trees = <(double, double, double)>[
-      ...map.treePositions,
+    final baseTrees = map.name == 'Snake'
+        ? _thinSpreadTrees(map.treePositions, keepRatio: 0.72)
+        : map.treePositions;
+    var trees = <(double, double, double)>[
+      ...baseTrees,
       for (final slot in closedSlots) (slot.x, slot.y, 0.94),
     ]..shuffle(_forestRng);
+    var rocks = List<(double, double, double)>.of(map.rockPositions);
+
+    if (map.name == 'Snake') {
+      final balanced = _rebalanceTreesToRocks(
+        treePositions: trees,
+        rockPositions: rocks,
+        treesPerRock: 4,
+      );
+      trees = balanced.treePositions;
+      rocks = balanced.rockPositions;
+    }
 
     return _StartingLayout(
       openSlots: openSlots,
       treePositions: List.unmodifiable(trees),
+      rockPositions: List.unmodifiable(rocks),
     );
+  }
+
+  List<(double, double, double)> _thinSpreadTrees(
+    List<(double, double, double)> treePositions, {
+    required double keepRatio,
+  }) {
+    if (treePositions.isEmpty) return const [];
+    final keepCount = (treePositions.length * keepRatio).round().clamp(
+      0,
+      treePositions.length,
+    );
+    if (keepCount >= treePositions.length) {
+      return List<(double, double, double)>.of(treePositions);
+    }
+
+    final removeIndices = _spreadIndices(
+      treePositions.length,
+      treePositions.length - keepCount,
+    );
+    return [
+      for (var i = 0; i < treePositions.length; i++)
+        if (!removeIndices.contains(i)) treePositions[i],
+    ];
+  }
+
+  _BalancedObstacles _rebalanceTreesToRocks({
+    required List<(double, double, double)> treePositions,
+    required List<(double, double, double)> rockPositions,
+    required int treesPerRock,
+  }) {
+    if (treePositions.isEmpty || treesPerRock <= 0) {
+      return _BalancedObstacles(
+        treePositions: treePositions,
+        rockPositions: rockPositions,
+      );
+    }
+
+    final extraRockCount = _additionalRocksForRatio(
+      treePositions.length,
+      rockPositions.length,
+      treesPerRock,
+    );
+    if (extraRockCount <= 0) {
+      return _BalancedObstacles(
+        treePositions: treePositions,
+        rockPositions: rockPositions,
+      );
+    }
+
+    final rockIndices = _spreadIndices(treePositions.length, extraRockCount);
+    final balancedTrees = <(double, double, double)>[];
+    final balancedRocks = <(double, double, double)>[...rockPositions];
+
+    for (var i = 0; i < treePositions.length; i++) {
+      final tree = treePositions[i];
+      if (rockIndices.contains(i)) {
+        balancedRocks.add((tree.$1, tree.$2, tree.$3));
+      } else {
+        balancedTrees.add(tree);
+      }
+    }
+
+    return _BalancedObstacles(
+      treePositions: balancedTrees,
+      rockPositions: balancedRocks,
+    );
+  }
+
+  int _additionalRocksForRatio(int treeCount, int rockCount, int treesPerRock) {
+    final deficit = treeCount - treesPerRock * rockCount;
+    if (deficit <= 0) return 0;
+    return (deficit / (treesPerRock + 1)).ceil().clamp(0, treeCount);
+  }
+
+  Set<int> _spreadIndices(int length, int count) {
+    if (count <= 0 || length <= 0) return const {};
+    final indices = <int>{};
+    final step = length / (count + 1);
+    for (var i = 1; i <= count; i++) {
+      indices.add((i * step).round().clamp(0, length - 1));
+    }
+    var fallback = 0;
+    while (indices.length < count && fallback < length) {
+      indices.add(fallback);
+      fallback++;
+    }
+    return indices;
   }
 
   int _initialOpenSlotCount(int totalSlots) {
@@ -894,6 +996,21 @@ class _ObstacleCluster {
 class _StartingLayout {
   final List<Vector2> openSlots;
   final List<(double, double, double)> treePositions;
+  final List<(double, double, double)> rockPositions;
 
-  const _StartingLayout({required this.openSlots, required this.treePositions});
+  const _StartingLayout({
+    required this.openSlots,
+    required this.treePositions,
+    required this.rockPositions,
+  });
+}
+
+class _BalancedObstacles {
+  final List<(double, double, double)> treePositions;
+  final List<(double, double, double)> rockPositions;
+
+  const _BalancedObstacles({
+    required this.treePositions,
+    required this.rockPositions,
+  });
 }
