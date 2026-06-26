@@ -204,6 +204,8 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
   static final _forestRng = math.Random();
   static const int _minInitialOpenSlots = 4;
   static const int _maxInitialOpenSlots = 6;
+  static const double _treePathClearance = PathData.pathWidth / 2 + 36;
+  static const double _treeSpacing = 62;
 
   void _buildMap(GameMap map) {
     _clusters.clear();
@@ -263,9 +265,16 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
     final baseTrees = map.name == 'Snake'
         ? _thinSpreadTrees(map.treePositions, keepRatio: 0.72)
         : map.treePositions;
-    var trees = <(double, double, double)>[
-      ...baseTrees,
+    final closedSlotTrees = [
       for (final slot in closedSlots) (slot.x, slot.y, 0.94),
+    ];
+    var trees = <(double, double, double)>[
+      ...closedSlotTrees,
+      ..._filterDecorTrees(
+        treePositions: baseTrees,
+        waypoints: map.waypoints,
+        reservedTrees: closedSlotTrees,
+      ),
     ]..shuffle(_forestRng);
     var rocks = List<(double, double, double)>.of(map.rockPositions);
 
@@ -284,6 +293,48 @@ class TdGame extends FlameGame with HasGameReference, TapCallbacks {
       treePositions: List.unmodifiable(trees),
       rockPositions: List.unmodifiable(rocks),
     );
+  }
+
+  List<(double, double, double)> _filterDecorTrees({
+    required List<(double, double, double)> treePositions,
+    required List<Vector2> waypoints,
+    required List<(double, double, double)> reservedTrees,
+  }) {
+    final accepted = <(double, double, double)>[...reservedTrees];
+    final result = <(double, double, double)>[];
+    for (final tree in treePositions) {
+      final point = Vector2(tree.$1, tree.$2);
+      if (_minDistanceToPath(point, waypoints) < _treePathClearance) {
+        continue;
+      }
+      final tooClose = accepted.any(
+        (other) => point.distanceTo(Vector2(other.$1, other.$2)) < _treeSpacing,
+      );
+      if (tooClose) continue;
+      accepted.add(tree);
+      result.add(tree);
+    }
+    return result;
+  }
+
+  double _minDistanceToPath(Vector2 point, List<Vector2> waypoints) {
+    var minDistance = double.infinity;
+    for (var i = 0; i < waypoints.length - 1; i++) {
+      minDistance = math.min(
+        minDistance,
+        _distanceToSegment(point, waypoints[i], waypoints[i + 1]),
+      );
+    }
+    return minDistance;
+  }
+
+  double _distanceToSegment(Vector2 point, Vector2 a, Vector2 b) {
+    final ab = b - a;
+    final ap = point - a;
+    final len2 = ab.length2;
+    if (len2 == 0) return ap.length;
+    final t = (ap.dot(ab) / len2).clamp(0.0, 1.0);
+    return (point - (a + ab * t)).length;
   }
 
   List<(double, double, double)> _thinSpreadTrees(
