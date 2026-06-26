@@ -125,12 +125,10 @@ class PathData {
     required List<Vector2> waypoints,
     required List<Vector2> rawSlots,
     required List<(double, double, double)> rawRocks,
-    List<(int, int)> clearCells = const [],
     double pathClearance = 48,
     double slotClearance = 44,
   }) {
     final visibleWaypoints = _withVisibleCastles(waypoints);
-    final emptyCells = clearCells.toSet();
 
     // 1) Slotlar
     final slotCells = <(int, int)>{};
@@ -168,7 +166,6 @@ class PathData {
     for (int j = 0; j < cellsY; j++) {
       for (int i = 0; i < cellsX; i++) {
         final key = (i, j);
-        if (emptyCells.contains(key)) continue;
         if (slotCells.contains(key)) continue;
         if (rockCells.contains(key)) continue;
         final c = _cellCenter(i, j);
@@ -193,19 +190,6 @@ class PathData {
       rockPositions: snappedRocks,
     );
   }
-
-  static final List<(int, int)> _zigzagClearCells = [
-    // Top entrance breathing room.
-    for (final x in [0, 1, 2, 3, 6, 7, 8, 9])
-      for (final y in [0, 1]) (x, y),
-    // Alternating gaps between zigzag lanes; keeps the forest from reading as
-    // one solid overlapping wall around the early Spring 2 path.
-    for (final y in [3, 4, 7, 8, 11, 12, 14, 15])
-      for (final x in [0, 2, 4, 5, 7, 9]) (x, y),
-    // Lower exit area.
-    for (final x in [6, 7, 8, 9])
-      for (final y in [13, 14, 15]) (x, y),
-  ];
 
   // ─────────────────────────────────────────────────────────────────────────
   // Harita 1 — SNAKE (S-yolu, soldan sağa)
@@ -253,10 +237,10 @@ class PathData {
   // ─────────────────────────────────────────────────────────────────────────
   // Harita 2 — ZIGZAG (yukardan aşağı, 3 zigzag)
   // ─────────────────────────────────────────────────────────────────────────
-  static final zigzag = _assemble(
+  static final zigzag = GameMap(
     name: 'Zigzag',
     waypoints: <Vector2>[
-      Vector2(60, 0),
+      Vector2(60, 47),
       Vector2(60, 180),
       Vector2(420, 180),
       Vector2(420, 360),
@@ -265,31 +249,50 @@ class PathData {
       Vector2(420, 540),
       Vector2(420, 750),
     ],
-    rawSlots: <Vector2>[
-      Vector2(180, 90),
-      Vector2(300, 90),
-      Vector2(180, 270),
-      Vector2(300, 270),
-      Vector2(180, 450),
-      Vector2(300, 450),
-      Vector2(180, 630),
-      Vector2(300, 630),
-      Vector2(160, 700),
-      Vector2(280, 700),
+    towerSlots: <Vector2>[
+      Vector2(170, 105),
+      Vector2(315, 105),
+      Vector2(170, 275),
+      Vector2(315, 275),
+      Vector2(170, 455),
+      Vector2(315, 455),
+      Vector2(170, 635),
+      Vector2(315, 635),
+      Vector2(230, 715),
+      Vector2(335, 715),
     ],
-    rawRocks: const <(double, double, double)>[
-      (130, 50, 1.0),
-      (370, 50, 1.15),
-      (240, 135, 0.9),
-      (350, 280, 0.9),
-      (120, 285, 0.95),
-      (130, 460, 1.0),
-      (365, 455, 1.0),
-      (235, 585, 0.9),
-      (380, 660, 0.95),
-      (110, 660, 1.1),
+    treePositions: const <(double, double, double)>[
+      (250, 70, 1.0),
+      (370, 82, 1.0),
+      (470, 130, 1.0),
+      (245, 130, 1.0),
+      (115, 255, 1.0),
+      (245, 255, 1.0),
+      (360, 252, 1.0),
+      (470, 315, 1.0),
+      (25, 430, 1.0),
+      (105, 430, 1.0),
+      (250, 430, 1.0),
+      (370, 430, 1.0),
+      (465, 490, 1.0),
+      (105, 610, 1.0),
+      (250, 610, 1.0),
+      (370, 610, 1.0),
+      (35, 690, 1.0),
+      (115, 710, 1.0),
+      (30, 760, 1.0),
+      (115, 770, 1.0),
+      (405, 700, 1.0),
     ],
-    clearCells: _zigzagClearCells,
+    rockPositions: const <(double, double, double)>[
+      (115, 105, 1.0),
+      (255, 215, 0.9),
+      (365, 275, 0.95),
+      (115, 455, 0.9),
+      (365, 455, 0.95),
+      (115, 635, 0.95),
+      (365, 635, 0.9),
+    ],
   );
 
   // ─────────────────────────────────────────────────────────────────────────
