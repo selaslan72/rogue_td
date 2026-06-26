@@ -47,34 +47,48 @@ class _GameScreenState extends State<GameScreen> {
           children: [
             _TopHud(game: _game),
             Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  GameWidget(game: _game),
-                  Positioned.fill(child: _SlotTowerPickerOverlay(game: _game)),
-                  Positioned.fill(child: _UpgradeOverlay(game: _game)),
-                  Positioned.fill(child: _WaveRewardOverlay(game: _game)),
-                  Positioned.fill(child: _RunResultOverlay(game: _game)),
-                  Positioned.fill(child: _PlacementStartOverlay(game: _game)),
-                  Positioned.fill(child: _WaveBannerOverlay(game: _game)),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: _SpeedButton(game: _game),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 56,
-                    child: _PauseButton(game: _game),
-                  ),
-                  const Positioned(top: 8, right: 104, child: _SoundButton()),
-                  if (kDebugMode)
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: _DebugToolsPanel(game: _game),
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: SizedBox(
+                    width: 480,
+                    height: 800,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        GameWidget(game: _game),
+                        Positioned.fill(
+                          child: _SlotTowerPickerOverlay(game: _game),
+                        ),
+                        Positioned.fill(child: _UpgradeOverlay(game: _game)),
+                        Positioned.fill(child: _WaveRewardOverlay(game: _game)),
+                        Positioned.fill(child: _RunResultOverlay(game: _game)),
+                        Positioned.fill(child: _WaveBannerOverlay(game: _game)),
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: _SpeedButton(game: _game),
+                        ),
+                        Positioned(
+                          top: 8,
+                          right: 56,
+                          child: _PauseButton(game: _game),
+                        ),
+                        const Positioned(
+                          top: 8,
+                          right: 104,
+                          child: _SoundButton(),
+                        ),
+                        if (kDebugMode)
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: _DebugToolsPanel(game: _game),
+                          ),
+                      ],
                     ),
-                ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -245,60 +259,40 @@ class _TopHud extends StatelessWidget {
                   : () => _showEnemySheet(ctx, preview),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlacementStartOverlay extends StatelessWidget {
-  final TdGame game;
-  const _PlacementStartOverlay({required this.game});
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: game.placementPhaseNotifier,
-      builder: (_, isPlacing, _) {
-        if (!isPlacing) return const SizedBox.shrink();
-        return SafeArea(
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: GestureDetector(
-                onTap: game.startFirstWave,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 48,
-                    vertical: 12,
+          ValueListenableBuilder<bool>(
+            valueListenable: game.placementPhaseNotifier,
+            builder: (_, isPlacing, _) {
+              if (!isPlacing) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: FilledButton.icon(
+                  onPressed: game.startFirstWave,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFFBBF24),
+                    foregroundColor: Colors.black,
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFBBF24),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0xAAFBBF24),
-                        blurRadius: 14,
-                        spreadRadius: 1,
-                      ),
-                    ],
-                  ),
-                  child: const Text(
-                    '▶  BAŞLAT',
+                  icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                  label: const Text(
+                    'BAŞLAT',
                     style: TextStyle(
-                      color: Colors.black,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      letterSpacing: 2,
+                      letterSpacing: 1.2,
                     ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

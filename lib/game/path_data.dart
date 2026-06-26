@@ -92,8 +92,16 @@ class PathData {
     return sqrt(ex * ex + ey * ey);
   }
 
-  static List<Vector2> _withVisibleTargetCastle(List<Vector2> waypoints) {
+  static List<Vector2> _withVisibleCastles(List<Vector2> waypoints) {
     final adjusted = List<Vector2>.of(waypoints);
+    final entry = adjusted.first;
+    adjusted[0] = Vector2(
+      entry.x.clamp(_targetCastleHalfW, mapW - _targetCastleHalfW),
+      entry.y.clamp(
+        _targetCastleTopClearance,
+        mapH - _targetCastleBottomClearance,
+      ),
+    );
     final target = adjusted.last;
     adjusted[adjusted.length - 1] = Vector2(
       target.x.clamp(_targetCastleHalfW, mapW - _targetCastleHalfW),
@@ -117,10 +125,12 @@ class PathData {
     required List<Vector2> waypoints,
     required List<Vector2> rawSlots,
     required List<(double, double, double)> rawRocks,
+    List<(int, int)> clearCells = const [],
     double pathClearance = 48,
     double slotClearance = 44,
   }) {
-    final visibleWaypoints = _withVisibleTargetCastle(waypoints);
+    final visibleWaypoints = _withVisibleCastles(waypoints);
+    final emptyCells = clearCells.toSet();
 
     // 1) Slotlar
     final slotCells = <(int, int)>{};
@@ -158,6 +168,7 @@ class PathData {
     for (int j = 0; j < cellsY; j++) {
       for (int i = 0; i < cellsX; i++) {
         final key = (i, j);
+        if (emptyCells.contains(key)) continue;
         if (slotCells.contains(key)) continue;
         if (rockCells.contains(key)) continue;
         final c = _cellCenter(i, j);
@@ -182,6 +193,19 @@ class PathData {
       rockPositions: snappedRocks,
     );
   }
+
+  static final List<(int, int)> _zigzagClearCells = [
+    // Top entrance breathing room.
+    for (final x in [0, 1, 2, 3, 6, 7, 8, 9])
+      for (final y in [0, 1]) (x, y),
+    // Alternating gaps between zigzag lanes; keeps the forest from reading as
+    // one solid overlapping wall around the early Spring 2 path.
+    for (final y in [3, 4, 7, 8, 11, 12, 14, 15])
+      for (final x in [0, 2, 4, 5, 7, 9]) (x, y),
+    // Lower exit area.
+    for (final x in [6, 7, 8, 9])
+      for (final y in [13, 14, 15]) (x, y),
+  ];
 
   // ─────────────────────────────────────────────────────────────────────────
   // Harita 1 — SNAKE (S-yolu, soldan sağa)
@@ -265,6 +289,7 @@ class PathData {
       (380, 660, 0.95),
       (110, 660, 1.1),
     ],
+    clearCells: _zigzagClearCells,
   );
 
   // ─────────────────────────────────────────────────────────────────────────

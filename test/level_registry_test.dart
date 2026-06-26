@@ -206,6 +206,34 @@ void main() {
     }
   });
 
+  test('all entrance castles stay inside the visible play area', () {
+    const castleHalfW = 40.0;
+    const castleTopClearance = 47.0;
+    const castleBottomClearance = 45.0;
+
+    for (final season in GameSeason.values) {
+      for (final level in LevelRegistry.allFor(season)) {
+        final entry = level.map.waypoints.first;
+
+        expect(
+          entry.x,
+          inInclusiveRange(castleHalfW, PathData.mapW - castleHalfW),
+          reason:
+              '${season.label} ${level.id} (${level.map.name}) entry castle overflows horizontally.',
+        );
+        expect(
+          entry.y,
+          inInclusiveRange(
+            castleTopClearance,
+            PathData.mapH - castleBottomClearance,
+          ),
+          reason:
+              '${season.label} ${level.id} (${level.map.name}) entry castle overflows vertically.',
+        );
+      }
+    }
+  });
+
   test('all campaign slots stay clear of enemy paths', () {
     for (final season in GameSeason.values) {
       for (final level in LevelRegistry.allFor(season)) {
